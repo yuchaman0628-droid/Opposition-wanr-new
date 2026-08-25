@@ -3,290 +3,695 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Tank vs Bike</title>
+    <title>3D Tank vs Bike - Enhanced</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #000;
-            font-family: sans-serif;
+            background-color: #050505;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
         }
-        #ui {
+
+        /* 選択画面 UI */
+        #select-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 15, 25, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            z-index: 100;
+        }
+
+        #select-screen h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+            letter-spacing: 3px;
+            text-shadow: 0 0 15px #00aaff;
+        }
+
+        #select-screen p {
+            font-size: 18px;
+            color: #aaa;
+            margin-bottom: 40px;
+        }
+
+        .card-container {
+            display: flex;
+            gap: 40px;
+        }
+
+        .select-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid #00aaff;
+            border-radius: 12px;
+            padding: 30px;
+            width: 220px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .select-card:hover {
+            background: rgba(0, 170, 255, 0.2);
+            transform: translateY(-10px);
+            box-shadow: 0 10px 20px rgba(0, 170, 255, 0.4);
+        }
+
+        .select-card h2 {
+            margin-top: 0;
+            color: #00e1ff;
+        }
+
+        /* ゲーム内 HUD */
+        #hud {
             position: absolute;
             top: 20px;
             left: 20px;
             color: #fff;
             text-shadow: 2px 2px 4px #000;
             pointer-events: none;
+            display: none;
         }
-        #game-over {
+
+        .bar-container {
+            width: 250px;
+            height: 18px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #fff;
+            border-radius: 4px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            width: 100%;
+            height: 100%;
+            background: #00ff66;
+            transition: width 0.1s;
+        }
+
+        /* ゲームオーバー / クリア 画面 */
+        #result-screen {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            color: #ff3333;
-            font-size: 48px;
-            font-weight: bold;
+            text-align: center;
+            color: #fff;
             display: none;
-            text-shadow: 3px 3px 6px #000;
-        }
-        .hp-bar-container {
-            width: 200px;
-            height: 20px;
-            background: #444;
+            z-index: 90;
+            background: rgba(0,0,0,0.85);
+            padding: 40px 60px;
+            border-radius: 15px;
             border: 2px solid #fff;
-            margin-top: 5px;
         }
-        .hp-bar {
-            width: 100%;
-            height: 100%;
-            background: #00ff00;
-            transition: width 0.1s;
+
+        #result-title {
+            font-size: 52px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .btn-retry {
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 20px;
+            background: #00aaff;
+            border: none;
+            color: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-retry:hover {
+            background: #0088cc;
         }
     </style>
     <!-- Three.js Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
-    <div id="ui">
-        <h2>戦車 (Player) vs バイク (Enemy)</h2>
-        <div>操作方法: [W][A][S][D] 移動 | [SPACE] 砲撃</div>
-        <br>
-        <div>タンク HP</div>
-        <div class="hp-bar-container"><div id="player-hp" class="hp-bar"></div></div>
-        <br>
-        <div>残存バイク数: <span id="enemy-count">5</span></div>
+
+    <!-- 乗り物選択画面 -->
+    <div id="select-screen">
+        <h1>3D TANK vs BIKE</h1>
+        <p>操作するマシンを選択してください</p>
+        <div class="card-container">
+            <div class="select-card" onclick="startGame('TANK')">
+                <h2>重戦車 (TANK)</h2>
+                <p>高耐久・高火力<br>強力な主砲でバイク群を吹き飛ばす！</p>
+            </div>
+            <div class="select-card" onclick="startGame('BIKE')">
+                <h2>戦闘バイク (BIKE)</h2>
+                <p>超高速・高機動<br>機銃とスピードで巨大戦車を撃破せよ！</p>
+            </div>
+        </div>
     </div>
-    <div id="game-over">GAME OVER<br><span style="font-size:20px; color:#fff;">F5キーでリトライ</span></div>
+
+    <!-- HUD -->
+    <div id="hud">
+        <h3 id="player-type-display">PLAYER</h3>
+        <div>HP</div>
+        <div class="bar-container"><div id="hp-bar" class="bar-fill"></div></div>
+        <br>
+        <div id="enemy-info">残存ターゲット: <span id="enemy-count">0</span></div>
+        <div style="margin-top: 15px; font-size: 14px; opacity: 0.8;">
+            [W][A][S][D] 移動 | [SPACE] 攻撃 | [Shift] ブースト(バイクのみ)
+        </div>
+    </div>
+
+    <!-- リザルト画面 -->
+    <div id="result-screen">
+        <div id="result-title">VICTORY</div>
+        <button class="btn-retry" onclick="location.reload()">もう一度プレイ</button>
+    </div>
 
     <script>
-        // --- 基本セットアップ ---
-        const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0xd0e0e0, 0.015);
+        // --- ゲーム全体管理 ---
+        let scene, camera, renderer;
+        let player, playerType = 'TANK';
+        let playerHp = 100, maxHp = 100;
+        let playerSpeed = 0, maxSpeed = 0.25, rotSpeed = 0.03;
+        
+        const bullets = [];
+        const enemies = [];
+        const particles = [];
+        const keys = {};
+        const raycaster = new THREE.Raycaster(); // 正確な当たり判定用のレイキャスター
+        let gameState = 'SELECT';
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
-        document.body.appendChild(renderer.domElement);
+        // --- プロシージャルテクスチャ生成（外部画像に頼らない高品質テクスチャ） ---
+        
+        // 1. 地面テクスチャ（草地・土ノイズ＋グリッド）
+        function createGroundTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#3a4d28';
+            ctx.fillRect(0, 0, 512, 512);
 
-        // ライティング
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-        scene.add(ambientLight);
+            // ノイズ追加
+            for (let i = 0; i < 30000; i++) {
+                const x = Math.random() * 512;
+                const y = Math.random() * 512;
+                const val = Math.floor(Math.random() * 30);
+                ctx.fillStyle = `rgba(${50 + val}, ${70 + val}, ${30 + val}, 0.15)`;
+                ctx.fillRect(x, y, 2, 2);
+            }
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(50, 80, 50);
-        dirLight.castShadow = true;
-        dirLight.shadow.mapSize.width = 2048;
-        dirLight.shadow.mapSize.height = 2048;
-        dirLight.shadow.camera.near = 0.5;
-        dirLight.shadow.camera.far = 200;
-        const d = 50;
-        dirLight.shadow.camera.left = -d;
-        dirLight.shadow.camera.right = d;
-        dirLight.shadow.camera.top = d;
-        dirLight.shadow.camera.bottom = -d;
-        scene.add(dirLight);
+            // グリッドライン
+            ctx.strokeStyle = 'rgba(20, 35, 15, 0.2)';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 512; i += 64) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 512); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(512, i); ctx.stroke();
+            }
 
-        // 地面
-        const floorGeo = new THREE.PlaneGeometry(300, 300);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x557755 });
-        const floor = new THREE.Mesh(floorGeo, floorMat);
-        floor.rotation.x = -Math.PI / 2;
-        floor.receiveShadow = true;
-        scene.add(floor);
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(30, 30);
+            return texture;
+        }
 
-        // --- オブジェクト生成関数 ---
+        // 2. 空テクスチャ（スカイグラデーション＆雲）
+        function createSkyTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
 
-        // 戦車（プレイヤー）の作成
-        function createTank() {
+            const grad = ctx.createLinearGradient(0, 0, 0, 512);
+            grad.addColorStop(0, '#0f2b48');   // 天頂: 濃紺
+            grad.addColorStop(0.5, '#20588a'); // 中空: 空色
+            grad.addColorStop(1, '#8caec9');   // 地平線: 薄青
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 512, 512);
+
+            // 雲
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+            for (let i = 0; i < 15; i++) {
+                const cx = Math.random() * 512;
+                const cy = Math.random() * 200 + 50;
+                const rx = Math.random() * 100 + 40;
+                const ry = Math.random() * 25 + 10;
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        // --- リアルな3Dモデル作成 ---
+
+        // 1. ディテール戦車モデル
+        function createDetailedTank() {
             const tank = new THREE.Group();
-            // 車体
-            const bodyGeo = new THREE.BoxGeometry(3, 1.2, 4);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2e5a1c });
-            const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.position.y = 0.8;
-            body.castShadow = true;
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2e4020, roughness: 0.6, metalness: 0.3 });
+            const darkMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.8, metalness: 0.2 });
+            const metalMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.3, metalness: 0.8 });
+
+            // 車体メイン
+            const body = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.0, 5.2), bodyMat);
+            body.position.y = 0.9;
+            body.castShadow = true; body.receiveShadow = true;
             tank.add(body);
 
-            // 砲塔
-            const turretGeo = new THREE.BoxGeometry(2, 0.8, 2);
-            const turretMat = new THREE.MeshStandardMaterial({ color: 0x1e3a12 });
-            const turret = new THREE.Mesh(turretGeo, turretMat);
-            turret.position.set(0, 1.6, 0);
-            turret.castShadow = true;
-            tank.add(turret);
+            // 前面傾斜装甲
+            const front = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.4, 1.4), bodyMat);
+            front.position.set(0, 1.1, 2.3);
+            front.rotation.x = Math.PI / 6;
+            front.castShadow = true;
+            tank.add(front);
 
-            // 砲身
-            const cannonGeo = new THREE.CylinderGeometry(0.15, 0.15, 2.5);
-            const cannonMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-            const cannon = new THREE.Mesh(cannonGeo, cannonMat);
+            // 履帯 & 転輪（左右）
+            [-1.9, 1.9].forEach(x => {
+                const tread = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.1, 5.6), darkMat);
+                tread.position.set(x, 0.75, 0);
+                tread.castShadow = true;
+                tank.add(tread);
+
+                for (let z = -2.2; z <= 2.2; z += 0.9) {
+                    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.85, 16), metalMat);
+                    wheel.rotation.z = Math.PI / 2;
+                    wheel.position.set(x, 0.45, z);
+                    wheel.castShadow = true;
+                    tank.add(wheel);
+                }
+            });
+
+            // 砲塔グループ
+            const turret = new THREE.Group();
+            turret.position.set(0, 1.5, 0.2);
+
+            const turretMesh = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.7, 0.9, 12), bodyMat);
+            turretMesh.position.y = 0.45;
+            turretMesh.castShadow = true;
+            turret.add(turretMesh);
+
+            // 主砲（ロングバレル）
+            const cannon = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 4.2, 16), metalMat);
             cannon.rotation.x = Math.PI / 2;
-            cannon.position.set(0, 1.7, 1.8);
+            cannon.position.set(0, 0.5, 2.4);
             cannon.castShadow = true;
-            tank.add(cannon);
+            turret.add(cannon);
 
+            // マズルブレーキ
+            const muzzle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.4, 0.6), metalMat);
+            muzzle.position.set(0, 0.5, 4.5);
+            turret.add(muzzle);
+
+            tank.add(turret);
+            tank.userData = { turret: turret };
             return tank;
         }
 
-        // バイク（敵）の作成
-        function createBike() {
+        // 2. ディテールバイクモデル
+        function createDetailedBike() {
             const bike = new THREE.Group();
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xd91414, roughness: 0.2, metalness: 0.6 });
+            const frameMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.7 });
+            const chromeMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.1, metalness: 0.9 });
+            const tireMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
 
-            // フレーム
-            const frameGeo = new THREE.BoxGeometry(0.6, 0.6, 1.8);
-            const frameMat = new THREE.MeshStandardMaterial({ color: 0xcc2222 });
-            const frame = new THREE.Mesh(frameGeo, frameMat);
-            frame.position.y = 0.6;
-            frame.castShadow = true;
-            bike.add(frame);
+            // フレーム・カウル
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 1.8), bodyMat);
+            body.position.set(0, 0.9, 0);
+            body.castShadow = true;
+            bike.add(body);
 
-            // 前輪・後輪
-            const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.2, 16);
-            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+            // 燃料タンク
+            const tankMesh = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 12), bodyMat);
+            tankMesh.scale.set(0.9, 0.8, 1.4);
+            tankMesh.position.set(0, 1.15, 0.2);
+            bike.add(tankMesh);
 
-            const frontWheel = new THREE.Mesh(wheelGeo, wheelMat);
+            // 前輪 & サスペンション
+            const wheelGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.25, 20);
+            const frontWheel = new THREE.Mesh(wheelGeo, tireMat);
             frontWheel.rotation.z = Math.PI / 2;
-            frontWheel.position.set(0, 0.4, 0.9);
+            frontWheel.position.set(0, 0.5, 1.3);
             frontWheel.castShadow = true;
             bike.add(frontWheel);
 
-            const backWheel = new THREE.Mesh(wheelGeo, wheelMat);
+            const fork1 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.1), chromeMat);
+            fork1.position.set(0.2, 0.85, 1.0);
+            fork1.rotation.x = -Math.PI / 12;
+            bike.add(fork1);
+            const fork2 = fork1.clone();
+            fork2.position.x = -0.2;
+            bike.add(fork2);
+
+            // 後輪
+            const backWheel = new THREE.Mesh(wheelGeo, tireMat);
             backWheel.rotation.z = Math.PI / 2;
-            backWheel.position.set(0, 0.4, -0.9);
+            backWheel.position.set(0, 0.5, -1.2);
             backWheel.castShadow = true;
             bike.add(backWheel);
+
+            // マフラー
+            const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 1.5), chromeMat);
+            exhaust.rotation.x = Math.PI / 2;
+            exhaust.position.set(0.35, 0.6, -0.6);
+            bike.add(exhaust);
+
+            // ライダー（ヘルメット＆胴体）
+            const rider = new THREE.Group();
+            const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 12), frameMat);
+            helmet.position.set(0, 1.6, 0.1);
+            rider.add(helmet);
+
+            const suit = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.7), frameMat);
+            suit.position.set(0, 1.25, -0.1);
+            suit.rotation.x = Math.PI / 8;
+            rider.add(suit);
+            bike.add(rider);
 
             return bike;
         }
 
-        // --- ゲーム状態管理 ---
-        const player = createTank();
-        scene.add(player);
+        // --- 初期化 & セットアップ ---
+        function initEngine() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x8caec9, 0.008);
 
-        let playerHp = 100;
-        const playerSpeed = 0.15;
-        const playerRotSpeed = 0.03;
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
 
-        const bullets = [];
-        const enemies = [];
-        const enemyCountMax = 5;
+            // ライティング
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
 
-        // キー入力
-        const keys = {};
-        window.addEventListener('keydown', e => keys[e.code] = true);
-        window.addEventListener('keyup', e => keys[e.code] = false);
+            const dirLight = new THREE.DirectionalLight(0xfffaed, 0.9);
+            dirLight.position.set(80, 120, 80);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.camera.near = 0.5;
+            dirLight.shadow.camera.far = 300;
+            const d = 80;
+            dirLight.shadow.camera.left = -d; dirLight.shadow.camera.right = d;
+            dirLight.shadow.camera.top = d; dirLight.shadow.camera.bottom = -d;
+            scene.add(dirLight);
+
+            // 地面（テクスチャ適用）
+            const groundGeo = new THREE.PlaneGeometry(500, 500);
+            const groundMat = new THREE.MeshStandardMaterial({ 
+                map: createGroundTexture(),
+                roughness: 0.8,
+                metalness: 0.1
+            });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // 空ドーム（テクスチャ適用）
+            const skyGeo = new THREE.SphereGeometry(400, 32, 15);
+            const skyMat = new THREE.MeshBasicMaterial({ 
+                map: createSkyTexture(), 
+                side: THREE.BackSide 
+            });
+            const sky = new THREE.Mesh(skyGeo, skyMat);
+            scene.add(sky);
+
+            // イベント登録
+            window.addEventListener('keydown', e => keys[e.code] = true);
+            window.addEventListener('keyup', e => keys[e.code] = false);
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        // ゲーム開始関数（モード分岐）
+        function startGame(type) {
+            playerType = type;
+            document.getElementById('select-screen').style.display = 'none';
+            document.getElementById('hud').style.display = 'block';
+
+            if (playerType === 'TANK') {
+                player = createDetailedTank();
+                maxHp = 100; playerHp = 100;
+                maxSpeed = 0.22; rotSpeed = 0.025;
+                document.getElementById('player-type-display').innerText = 'PLAYER: 重戦車';
+                
+                // 敵：バイク 6台
+                for (let i = 0; i < 6; i++) spawnEnemy('BIKE');
+            } else {
+                player = createDetailedBike();
+                maxHp = 50; playerHp = 50;
+                maxSpeed = 0.45; rotSpeed = 0.045;
+                document.getElementById('player-type-display').innerText = 'PLAYER: 戦闘バイク';
+
+                // 敵：巨大ボスタンク 2台
+                for (let i = 0; i < 2; i++) spawnEnemy('TANK');
+            }
+
+            scene.add(player);
+            updateEnemyCountUI();
+            gameState = 'PLAYING';
+            animate();
+        }
 
         // 敵のスポーン
-        function spawnEnemy() {
-            const bike = createBike();
+        function spawnEnemy(type) {
+            let enemyObj;
             const angle = Math.random() * Math.PI * 2;
-            const dist = 40 + Math.random() * 40;
-            bike.position.x = player.position.x + Math.sin(angle) * dist;
-            bike.position.z = player.position.z + Math.cos(angle) * dist;
-            scene.add(bike);
-            enemies.push(bike);
+            const dist = 50 + Math.random() * 40;
+
+            if (type === 'BIKE') {
+                enemyObj = createDetailedBike();
+                enemyObj.userData = { type: 'BIKE', hp: 20, maxHp: 20, speed: 0.2, shootCooldown: 0 };
+            } else {
+                enemyObj = createDetailedTank();
+                enemyObj.scale.set(1.2, 1.2, 1.2); // 巨大化
+                enemyObj.userData = { type: 'TANK', hp: 150, maxHp: 150, speed: 0.08, shootCooldown: 0 };
+            }
+
+            enemyObj.position.x = Math.sin(angle) * dist;
+            enemyObj.position.z = Math.cos(angle) * dist;
+            scene.add(enemyObj);
+            enemies.push(enemyObj);
         }
 
-        for (let i = 0; i < enemyCountMax; i++) {
-            spawnEnemy();
-        }
+        // 射撃（修正点：レイキャストで当たらない問題を解決）
+        let lastShotTime = 0;
+        function shoot(shooter, isPlayer = false) {
+            const now = Date.now();
+            const coolTime = (isPlayer && playerType === 'BIKE') ? 120 : 500; // バイクは連射速度が速い
+            if (now - lastShotTime < coolTime && isPlayer) return;
+            if (isPlayer) lastShotTime = now;
 
-        // 砲撃
-        let canShoot = true;
-        function shoot() {
-            if (!canShoot) return;
-            canShoot = false;
-            setTimeout(() => canShoot = true, 400); // 連射速度制限
-
-            const bulletGeo = new THREE.SphereGeometry(0.2, 8, 8);
-            const bulletMat = new THREE.MeshBasicMaterial({ color: 0xffcc00 });
+            const bulletGeo = new THREE.SphereGeometry(isPlayer && playerType === 'TANK' ? 0.35 : 0.18, 8, 8);
+            const bulletMat = new THREE.MeshBasicMaterial({ color: isPlayer ? 0xffea00 : 0xff3300 });
             const bullet = new THREE.Mesh(bulletGeo, bulletMat);
 
-            // プレイヤーの前方から発射
-            const dir = new THREE.Vector3(0, 0, 1).applyQuaternion(player.quaternion);
-            bullet.position.copy(player.position).add(new THREE.Vector3(0, 1.7, 0)).add(dir.clone().multiplyScalar(2));
-            bullet.userData = { velocity: dir.multiplyScalar(0.8), life: 100 };
+            // 発射位置＆方向の正確な決定
+            const dir = new THREE.Vector3(0, 0, 1).applyQuaternion(shooter.quaternion);
             
+            // Y方向（高さ）のずれを正しく合わせる
+            const spawnOffset = (shooter.userData.type === 'TANK' || (isPlayer && playerType === 'TANK')) ? 2.0 : 0.9;
+            bullet.position.copy(shooter.position).add(new THREE.Vector3(0, spawnOffset, 0)).add(dir.clone().multiplyScalar(2.5));
+
+            bullet.userData = { 
+                velocity: dir.multiplyScalar(1.2), 
+                life: 90, 
+                isPlayerBullet: isPlayer,
+                damage: (isPlayer && playerType === 'TANK') ? 40 : 12,
+                lastPos: bullet.position.clone() // 移動線分判定用
+            };
+
             scene.add(bullet);
             bullets.push(bullet);
         }
 
-        // --- メインゲームループ ---
+        // 爆発エフェクト
+        function createExplosion(pos, isBig = false) {
+            const count = isBig ? 30 : 12;
+            for (let i = 0; i < count; i++) {
+                const p = new THREE.Mesh(
+                    new THREE.SphereGeometry(Math.random() * 0.3 + 0.1, 6, 6),
+                    new THREE.MeshBasicMaterial({ color: Math.random() > 0.3 ? 0xff4500 : 0xffd700 })
+                );
+                p.position.copy(pos);
+                p.userData = {
+                    vel: new THREE.Vector3(
+                        (Math.random() - 0.5) * 0.6,
+                        (Math.random() - 0.2) * 0.5,
+                        (Math.random() - 0.5) * 0.6
+                    ),
+                    life: 25
+                };
+                scene.add(p);
+                particles.push(p);
+            }
+        }
+
+        // --- メインループ ---
         function animate() {
+            if (gameState !== 'PLAYING') return;
             requestAnimationFrame(animate);
 
-            if (playerHp <= 0) return;
-
             // 1. プレイヤー操作
-            if (keys['KeyW']) player.translateZ(playerSpeed);
-            if (keys['KeyS']) player.translateZ(-playerSpeed);
-            if (keys['KeyA']) player.rotation.y += playerRotSpeed;
-            if (keys['KeyD']) player.rotation.y -= playerRotSpeed;
-            if (keys['Space']) shoot();
+            let currentMaxSpeed = maxSpeed;
+            if (keys['ShiftLeft'] && playerType === 'BIKE') currentMaxSpeed *= 1.6; // バイクのブースト
 
-            // カメラの追従
-            const camOffset = new THREE.Vector3(0, 6, -12).applyQuaternion(player.quaternion);
+            if (keys['KeyW']) playerSpeed = Math.min(playerSpeed + 0.01, currentMaxSpeed);
+            else if (keys['KeyS']) playerSpeed = Math.max(playerSpeed - 0.01, -currentMaxSpeed * 0.5);
+            else playerSpeed *= 0.92; // 減速
+
+            if (keys['KeyA']) player.rotation.y += rotSpeed;
+            if (keys['KeyD']) player.rotation.y -= rotSpeed;
+            if (keys['Space']) shoot(player, true);
+
+            player.translateZ(playerSpeed);
+
+            // カメラ追従
+            const camDist = playerType === 'TANK' ? -14 : -10;
+            const camHeight = playerType === 'TANK' ? 7 : 4;
+            const camOffset = new THREE.Vector3(0, camHeight, camDist).applyQuaternion(player.quaternion);
             camera.position.copy(player.position).add(camOffset);
-            camera.lookAt(player.position.clone().add(new THREE.Vector3(0, 1.5, 0)));
+            camera.lookAt(player.position.clone().add(new THREE.Vector3(0, 1.2, 0)));
 
-            // 2. 弾の移動 & 判定
+            // 2. 弾の移動 & **レイキャスト当たり判定（当たらない問題を完全に解消）**
             for (let i = bullets.length - 1; i >= 0; i--) {
                 const b = bullets[i];
+                b.userData.lastPos.copy(b.position);
                 b.position.add(b.userData.velocity);
                 b.userData.life--;
 
-                // 敵との当たり判定
-                for (let j = enemies.length - 1; j >= 0; j--) {
-                    const e = enemies[j];
-                    if (b.position.distanceTo(e.position) < 1.5) {
-                        scene.remove(e);
-                        enemies.splice(j, 1);
+                // 移動前後の線分でレイキャスト（高速移動によるすり抜け・高さのズレを完全に判定）
+                const moveSegment = b.position.clone().sub(b.userData.lastPos);
+                const rayLength = moveSegment.length();
+                raycaster.set(b.userData.lastPos, moveSegment.normalize());
+                raycaster.far = rayLength;
+
+                if (b.userData.isPlayerBullet) {
+                    // プレイヤーの弾 -> 敵への命中判定
+                    const intersects = raycaster.intersectObjects(enemies, true);
+                    if (intersects.length > 0) {
+                        // 根元の敵グループを取得
+                        let hitEnemy = intersects[0].object;
+                        while (hitEnemy.parent && !enemies.includes(hitEnemy)) {
+                            hitEnemy = hitEnemy.parent;
+                        }
+
+                        createExplosion(intersects[0].point);
+                        hitEnemy.userData.hp -= b.userData.damage;
+
+                        if (hitEnemy.userData.hp <= 0) {
+                            createExplosion(hitEnemy.position, true);
+                            scene.remove(hitEnemy);
+                            const idx = enemies.indexOf(hitEnemy);
+                            if (idx > -1) enemies.splice(idx, 1);
+                            updateEnemyCountUI();
+
+                            if (enemies.length === 0) endGame(true);
+                        }
+
                         scene.remove(b);
                         bullets.splice(i, 1);
-                        
-                        // 撃破後、時間を置いて再スポーン
-                        setTimeout(spawnEnemy, 2000);
-                        document.getElementById('enemy-count').innerText = enemies.length;
-                        break;
+                        continue;
+                    }
+                } else {
+                    // 敵の弾 -> プレイヤーへの命中判定
+                    const intersects = raycaster.intersectObject(player, true);
+                    if (intersects.length > 0) {
+                        createExplosion(intersects[0].point);
+                        damagePlayer(b.userData.damage);
+                        scene.remove(b);
+                        bullets.splice(i, 1);
+                        continue;
                     }
                 }
 
-                // 寿命切れ削除
-                if (b.userData.life <= 0 && bullets[i]) {
+                // 寿命切れ処理
+                if (b.userData.life <= 0) {
                     scene.remove(b);
                     bullets.splice(i, 1);
                 }
             }
 
-            // 3. 敵（バイク）のAI制御
-            enemies.forEach(bike => {
-                // プレイヤーへ向かって全速移動
-                bike.lookAt(player.position);
-                bike.translateZ(0.12);
+            // 3. 敵（AI）の移動・射撃
+            enemies.forEach(enemy => {
+                enemy.lookAt(player.position);
+                const dist = enemy.position.distanceTo(player.position);
 
-                // プレイヤーへの突撃（接触ダメージ）
-                if (bike.position.distanceTo(player.position) < 2.0) {
-                    playerHp -= 0.5;
-                    document.getElementById('player-hp').style.width = Math.max(0, playerHp) + '%';
+                if (enemy.userData.type === 'BIKE') {
+                    // バイクAI: 突撃＆接近戦
+                    enemy.translateZ(enemy.userData.speed);
+                    if (dist < 2.5) {
+                        damagePlayer(0.8); // 接触ダメージ
+                    }
+                } else {
+                    // 戦車AI: 距離を保ちつつ砲撃
+                    if (dist > 15) enemy.translateZ(enemy.userData.speed);
                     
-                    if (playerHp <= 0) {
-                        document.getElementById('game-over').style.display = 'block';
+                    enemy.userData.shootCooldown++;
+                    if (enemy.userData.shootCooldown > 100) {
+                        shoot(enemy, false);
+                        enemy.userData.shootCooldown = 0;
                     }
                 }
             });
 
+            // 4. パーティクル更新
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.position.add(p.userData.vel);
+                p.userData.life--;
+                p.scale.multiplyScalar(0.92);
+                if (p.userData.life <= 0) {
+                    scene.remove(p);
+                    particles.splice(i, 1);
+                }
+            }
+
             renderer.render(scene, camera);
         }
 
-        // ウィンドウサイズ変更対応
-        window.addEventListener('resize', () => {
+        // ダメージ・UI関連
+        function damagePlayer(amount) {
+            playerHp -= amount;
+            const percent = Math.max(0, (playerHp / maxHp) * 100);
+            document.getElementById('hp-bar').style.width = percent + '%';
+            if (playerHp <= 0) endGame(false);
+        }
+
+        function updateEnemyCountUI() {
+            document.getElementById('enemy-count').innerText = enemies.length;
+        }
+
+        function endGame(isWin) {
+            gameState = 'END';
+            const screen = document.getElementById('result-screen');
+            const title = document.getElementById('result-title');
+            screen.style.display = 'block';
+            title.innerText = isWin ? 'VICTORY!' : 'GAME OVER';
+            title.style.color = isWin ? '#00ffcc' : '#ff3333';
+        }
+
+        function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+        }
 
-        animate();
+        // 初期化実行
+        initEngine();
     </script>
 </body>
 </html>
