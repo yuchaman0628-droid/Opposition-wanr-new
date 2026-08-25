@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+html_content = """<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Opposition‐WAR Custom Online & Mobile</title>
+    <title>Opposition‐WAR Custom Online & Mobile (Fixed)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -246,17 +246,18 @@
         .leaderboard-table th { color: #00ffcc; }
 
         /* HUD & MOBILE CONTROLS */
-        #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; }
+        #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; z-index: 10; }
         
         #enemy-hp-container {
             position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 8px;
+            display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
         }
         .enemy-hp-card {
             background: rgba(0,0,0,0.75); border: 1px solid #ff3333;
             padding: 4px 8px; border-radius: 5px; width: 110px; text-align: center; color: #fff;
+            font-family: sans-serif; font-size: 10px;
         }
-        .enemy-hp-bar-bg { width: 100%; height: 6px; background: #333; border-radius: 2px; overflow: hidden; }
+        .enemy-hp-bar-bg { width: 100%; height: 6px; background: #333; border-radius: 2px; overflow: hidden; margin-top: 2px; }
         .enemy-hp-bar-fill { width: 100%; height: 100%; background: #ff3300; transition: width 0.1s; }
 
         /* Minimap */
@@ -271,7 +272,7 @@
         #player-hp-container {
             position: absolute; top: 12px; left: 12px;
             width: 160px; background: rgba(0,0,0,0.8); border: 1.5px solid #00ffcc;
-            border-radius: 6px; padding: 6px 10px; text-align: center;
+            border-radius: 6px; padding: 6px 10px; text-align: center; font-family: sans-serif;
         }
         .player-hp-header { display: flex; justify-content: space-between; color: #00ffcc; font-size: 11px; margin-bottom: 2px; }
         .player-hp-bar-bg { width: 100%; height: 10px; background: #112222; border-radius: 3px; overflow: hidden; border: 1px solid #00ffcc; margin-bottom: 4px; }
@@ -336,6 +337,7 @@
             box-shadow: 0 0 12px rgba(0,0,0,0.5);
             touch-action: none;
             user-select: none;
+            cursor: pointer;
         }
         .btn-touch-action:active { transform: scale(0.92); }
 
@@ -377,12 +379,13 @@
             padding: 2px 8px;
             border-radius: 10px;
             display: none;
+            font-family: sans-serif;
         }
 
         /* Result Screen */
-        #result-screen { display: none; text-align: center; z-index: 150; }
+        #result-screen { display: none; text-align: center; z-index: 150; justify-content: center; }
         #result-title { font-size: clamp(40px, 10vw, 72px); margin-bottom: 10px; text-shadow: 0 0 30px rgba(255,255,255,0.8); }
-        .btn-retry { padding: 12px 35px; font-size: 20px; background: #00aaff; border: none; color: #fff; cursor: pointer; font-weight: bold; border-radius: 4px; }
+        .btn-retry { padding: 12px 35px; font-size: 20px; background: #00aaff; border: none; color: #fff; cursor: pointer; font-weight: bold; border-radius: 4px; box-shadow: 0 0 15px rgba(0,170,255,0.6); }
     </style>
 
     <!-- Three.js & PeerJS for WebRTC Online Multiplayer -->
@@ -394,7 +397,7 @@
     <!-- 1. MAIN SELECT / LOBBY SCREEN -->
     <div id="select-screen" class="overlay-screen">
         <h1>Opposition‐WAR</h1>
-        <p class="subtitle">ONLINE & MOBILE MULTIPLAYER</p>
+        <p class="subtitle">ONLINE & MOBILE MULTIPLAYER (FIXED)</p>
 
         <!-- Mode Select -->
         <div class="mode-container">
@@ -419,11 +422,11 @@
         <div class="panel-container">
             <div id="card-TANK" class="select-card active" onclick="selectMachine('TANK')">
                 <h2>重戦車 (TANK)</h2>
-                <p>高耐久 & 360°ミサイル</p>
+                <p>高耐久 & 360°全方位連射</p>
             </div>
             <div id="card-BIKE" class="select-card" onclick="selectMachine('BIKE')">
                 <h2>バイク (BIKE)</h2>
-                <p>超高速 & ニトロバースト</p>
+                <p>超高速 & 高機動ブースト</p>
             </div>
         </div>
 
@@ -488,7 +491,7 @@
             <canvas id="minimap" width="90" height="90"></canvas>
         </div>
 
-        <div id="net-ping">ONLINE PING: 24ms</div>
+        <div id="net-ping">ONLINE CONNECTED</div>
 
         <!-- Touch Controls overlay -->
         <div id="mobile-controls">
@@ -511,7 +514,7 @@
     <!-- 3. RESULT SCREEN -->
     <div id="result-screen" class="overlay-screen">
         <div id="result-title">VICTORY</div>
-        <button class="btn-retry" onclick="location.reload()">RETRY</button>
+        <button class="btn-retry" onclick="resetAndRestart()">RETRY</button>
     </div>
 
     <script>
@@ -526,8 +529,8 @@
                 seGainNode = audioCtx.createGain();
                 bgmGainNode.connect(audioCtx.destination);
                 seGainNode.connect(audioCtx.destination);
-                bgmGainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                seGainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                bgmGainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                seGainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
             }
             if (audioCtx.state === 'suspended') audioCtx.resume();
         }
@@ -538,17 +541,17 @@
             const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
             osc.type = isHeavy ? 'sawtooth' : 'square';
             osc.frequency.setValueAtTime(isHeavy ? 150 : 600, now);
-            osc.frequency.exponentialRampToValueAtTime(30, now + (isHeavy ? 0.3 : 0.1));
-            gain.gain.setValueAtTime(0.7, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + (isHeavy ? 0.3 : 0.1));
+            osc.frequency.exponentialRampToValueAtTime(30, now + (isHeavy ? 0.25 : 0.08));
+            gain.gain.setValueAtTime(0.5, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + (isHeavy ? 0.25 : 0.08));
             osc.connect(gain); gain.connect(seGainNode);
-            osc.start(now); osc.stop(now + (isHeavy ? 0.3 : 0.1));
+            osc.start(now); osc.stop(now + (isHeavy ? 0.25 : 0.08));
         }
 
         function playExplosionSound() {
             if (!audioCtx) return;
             const now = audioCtx.currentTime;
-            const bufferSize = audioCtx.sampleRate * 0.4;
+            const bufferSize = Math.floor(audioCtx.sampleRate * 0.35);
             const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
             const data = buffer.getChannelData(0);
             for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
@@ -557,11 +560,11 @@
             noise.buffer = buffer;
             const filter = audioCtx.createBiquadFilter();
             filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(300, now);
-            filter.frequency.exponentialRampToValueAtTime(20, now + 0.4);
+            filter.frequency.setValueAtTime(250, now);
+            filter.frequency.exponentialRampToValueAtTime(20, now + 0.35);
             const gain = audioCtx.createGain();
-            gain.gain.setValueAtTime(0.9, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            gain.gain.setValueAtTime(0.8, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
 
             noise.connect(filter); filter.connect(gain); gain.connect(seGainNode);
             noise.start(now);
@@ -574,14 +577,15 @@
             osc.type = 'sine';
             osc.frequency.setValueAtTime(300, now);
             osc.frequency.exponentialRampToValueAtTime(1200, now + 0.4);
-            gain.gain.setValueAtTime(0.6, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+            gain.gain.setValueAtTime(0.5, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
             osc.connect(gain); gain.connect(seGainNode);
-            osc.start(now); osc.stop(now + 0.45);
+            osc.start(now); osc.stop(now + 0.4);
         }
 
         function startBGM() {
             if (!audioCtx) return;
+            if (bgmInterval) clearInterval(bgmInterval);
             let step = 0;
             const notes = [110, 110, 130, 110, 146, 130, 110, 98];
             bgmInterval = setInterval(() => {
@@ -590,19 +594,20 @@
                 const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(notes[step % notes.length], now);
-                gain.gain.setValueAtTime(0.2, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
                 osc.connect(gain); gain.connect(bgmGainNode);
-                osc.start(now); osc.stop(now + 0.2);
+                osc.start(now); osc.stop(now + 0.18);
                 step++;
             }, 180);
         }
 
-        // --- ONLINE MULTIPLAYER PEERJS ENGINE ---
+        // --- ONLINE MULTIPLAYER PEERJS ENGINE (FIXED) ---
         let playMode = 'OFFLINE';
         let peer = null, conn = null;
-        let isHost = false, roomCode = '';
-        let remotePlayerData = { x: 0, z: 0, rotY: 0, hp: 100, isShooting: false, machineType: 'TANK' };
+        let myShortId = '';
+        let isHost = false;
+        let remoteTargetPos = { x: 0, z: 0, rotY: 0 };
 
         function selectPlayMode(mode) {
             playMode = mode;
@@ -613,12 +618,14 @@
         }
 
         function initPeerJS() {
-            const shortId = Math.floor(1000 + Math.random() * 9000).toString();
-            peer = new Peer(shortId);
+            myShortId = Math.floor(1000 + Math.random() * 9000).toString();
+            const fullPeerId = 'oppwar-room-' + myShortId;
+            
+            peer = new Peer(fullPeerId);
 
             peer.on('open', id => {
-                document.getElementById('my-peer-id').innerText = id;
-                document.getElementById('online-status').innerText = 'ルーム作成または4桁のID入力で参加してください';
+                document.getElementById('my-peer-id').innerText = myShortId;
+                document.getElementById('online-status').innerText = '部屋作成または4桁のID入力で参加してください';
             });
 
             peer.on('connection', c => {
@@ -635,8 +642,7 @@
 
         function hostOnlineRoom() {
             if (!peer) return;
-            const id = document.getElementById('my-peer-id').innerText;
-            document.getElementById('online-status').innerText = `部屋を作成しました！対戦相手に4桁のID [ ${id} ] を共有してください`;
+            document.getElementById('online-status').innerText = `部屋を作成しました！対戦相手に4桁のID [ ${myShortId} ] を共有してください`;
         }
 
         function joinOnlineRoom() {
@@ -646,7 +652,8 @@
                 return;
             }
             document.getElementById('online-status').innerText = `ID: ${targetId} へ接続中...`;
-            conn = peer.connect(targetId);
+            const fullTargetPeerId = 'oppwar-room-' + targetId;
+            conn = peer.connect(fullTargetPeerId);
             isHost = false;
             setupConnection();
         }
@@ -655,36 +662,32 @@
             conn.on('open', () => {
                 document.getElementById('online-status').innerText = 'オンライン接続成功！バトルを開始できます';
                 document.getElementById('net-ping').style.display = 'block';
+
+                // 初期状態の送信
+                sendNetworkData({
+                    type: 'INIT_PLAYER',
+                    machine: selectedMachine,
+                    color: selectedColorHex,
+                    maxHp: maxHp
+                });
             });
 
             conn.on('data', data => {
                 if (data.type === 'INIT_PLAYER') {
-                    // 相手が選択したマシン情報・カラーで相手側のメッシュを構築
                     setupRemoteEnemy(data.machine, data.color, data.maxHp);
-                    if (gameState === 'PLAYING') {
-                        sendNetworkData({
-                            type: 'INIT_PLAYER',
-                            machine: selectedMachine,
-                            color: selectedColorHex,
-                            maxHp: maxHp
-                        });
-                    }
                 } else if (data.type === 'SYNC_POS') {
                     if (!remoteEnemyMesh && data.machine) {
                         setupRemoteEnemy(data.machine, data.color, data.maxHp);
                     }
                     if (remoteEnemyMesh) {
-                        remoteEnemyMesh.position.x += (data.x - remoteEnemyMesh.position.x) * 0.3;
-                        remoteEnemyMesh.position.z += (data.z - remoteEnemyMesh.position.z) * 0.3;
-                        remoteEnemyMesh.rotation.y = data.rotY;
-                        if (data.hp !== undefined) {
-                            remoteEnemyMesh.userData.hp = data.hp;
-                            const fill = document.getElementById('hp-fill-0');
-                            if (fill) fill.style.width = Math.max(0, (data.hp / remoteEnemyMesh.userData.maxHp) * 100) + '%';
-                        }
+                        remoteTargetPos.x = data.x;
+                        remoteTargetPos.z = data.z;
+                        remoteTargetPos.rotY = data.rotY;
                     }
                 } else if (data.type === 'SHOOT') {
                     if (remoteEnemyMesh) shoot(remoteEnemyMesh, false);
+                } else if (data.type === 'TAKE_DAMAGE') {
+                    damagePlayer(data.amount);
                 }
             });
         }
@@ -721,13 +724,14 @@
         let player, playerTurret, playerCannon, rearWheelMesh;
         let playerHp = 100, maxHp = 100, attackDamage = 15, cooldownMult = 1.0;
         let playerSpeed = 0, maxSpeed = 0.22, rotSpeed = 0.025;
-        let skillGauge = 0, isSkillActive = false, skillTimer = 0;
+        let skillGauge = 0, isSkillActive = false;
         let camShake = 0;
 
         const bullets = [], enemies = [], particles = [], obstacles = [];
         let remoteEnemyMesh = null;
         const keys = {};
         let gameState = 'SELECT';
+        let animationFrameId = null;
 
         // Mobile Touch Control Variables
         let touchMoveX = 0, touchMoveY = 0;
@@ -966,7 +970,6 @@
             window.addEventListener('resize', onWindowResize);
         }
 
-        // --- オンライン対戦相手の動的構築 ---
         function setupRemoteEnemy(machineType, colorHex, enemyMaxHp) {
             if (remoteEnemyMesh) {
                 scene.remove(remoteEnemyMesh);
@@ -976,20 +979,21 @@
 
             const color = colorHex || 0xff2222;
             const hp = enemyMaxHp || (machineType === 'TANK' ? 100 : 60);
+            const enemyId = 'remote-enemy-player';
 
             if (machineType === 'TANK') {
                 remoteEnemyMesh = createDetailedTank(color, true);
-                remoteEnemyMesh.userData = { type: 'TANK', name: 'RIVAL ONLINE', hp: hp, maxHp: hp, radius: 3.5 };
+                remoteEnemyMesh.userData = { id: enemyId, type: 'TANK', name: 'RIVAL ONLINE', hp: hp, maxHp: hp, radius: 2.2 };
             } else {
                 remoteEnemyMesh = createRealBike(color, true);
-                remoteEnemyMesh.userData = { type: 'BIKE', name: 'RIVAL ONLINE', hp: hp, maxHp: hp, radius: 2.2 };
+                remoteEnemyMesh.userData = { id: enemyId, type: 'BIKE', name: 'RIVAL ONLINE', hp: hp, maxHp: hp, radius: 1.5 };
             }
 
             scene.add(remoteEnemyMesh);
             enemies.push(remoteEnemyMesh);
 
             const container = document.getElementById('enemy-hp-container');
-            container.innerHTML = `<div class="enemy-hp-card"><div>RIVAL ONLINE</div><div class="enemy-hp-bar-bg"><div class="enemy-hp-bar-fill" id="hp-fill-0"></div></div></div>`;
+            container.innerHTML = `<div class="enemy-hp-card" id="card-${enemyId}"><div>RIVAL ONLINE</div><div class="enemy-hp-bar-bg"><div class="enemy-hp-bar-fill" id="hp-fill-${enemyId}"></div></div></div>`;
         }
 
         function startGame() {
@@ -1021,7 +1025,6 @@
                 spawnEnemy('BIKE', 'AI_RIDER_A');
                 spawnEnemy('TANK', 'AI_TANK_B');
             } else {
-                // オンライン対戦時は通信相手に自分の選択（マシン・カラー・HP）を通知
                 sendNetworkData({
                     type: 'INIT_PLAYER',
                     machine: selectedMachine,
@@ -1032,19 +1035,20 @@
 
             startBGM();
             gameState = 'PLAYING';
-            animate();
+            if (!animationFrameId) animate();
         }
 
         function spawnEnemy(type, name) {
             let enemyObj;
-            const angle = Math.random() * Math.PI * 2, dist = 55 + Math.random() * 20;
+            const angle = Math.random() * Math.PI * 2, dist = 45 + Math.random() * 20;
+            const enemyId = 'enemy-' + Math.random().toString(36).substr(2, 9);
 
             if (type === 'BIKE') {
                 enemyObj = createRealBike(0xdd2222, true);
-                enemyObj.userData = { type: 'BIKE', name: name, hp: 45, maxHp: 45, speed: 0.24, radius: 2.2 };
+                enemyObj.userData = { id: enemyId, type: 'BIKE', name: name, hp: 45, maxHp: 45, speed: 0.24, radius: 1.5 };
             } else {
                 enemyObj = createDetailedTank(0x662222, true);
-                enemyObj.userData = { type: 'TANK', name: name, hp: 130, maxHp: 130, speed: 0.09, radius: 3.5, shootCooldown: 0 };
+                enemyObj.userData = { id: enemyId, type: 'TANK', name: name, hp: 130, maxHp: 130, speed: 0.09, radius: 2.2, shootCooldown: 0 };
             }
 
             enemyObj.position.x = Math.sin(angle) * dist;
@@ -1054,7 +1058,8 @@
             const container = document.getElementById('enemy-hp-container');
             const card = document.createElement('div');
             card.className = 'enemy-hp-card';
-            card.innerHTML = `<div>${name}</div><div class="enemy-hp-bar-bg"><div class="enemy-hp-bar-fill" id="hp-fill-${enemies.indexOf(enemyObj)}"></div></div>`;
+            card.id = `card-${enemyId}`;
+            card.innerHTML = `<div>${name}</div><div class="enemy-hp-bar-bg"><div class="enemy-hp-bar-fill" id="hp-fill-${enemyId}"></div></div>`;
             container.appendChild(card);
         }
 
@@ -1085,7 +1090,7 @@
                 velocity: dir.multiplyScalar(isHeavy ? 1.4 : 1.8),
                 life: 80, isPlayerBullet: isPlayer,
                 damage: isPlayer ? attackDamage : (isHeavy ? 30 : 10),
-                hitRadius: isHeavy ? 2.8 : 2.0
+                hitRadius: isHeavy ? 1.5 : 1.0
             };
 
             scene.add(bullet); bullets.push(bullet);
@@ -1094,7 +1099,7 @@
         function triggerSpecialSkill() {
             if (skillGauge < 100 || isSkillActive) return;
             skillGauge = 0; updateSkillUI();
-            isSkillActive = true; skillTimer = 200;
+            isSkillActive = true;
             playSkillSound();
 
             if (selectedMachine === 'TANK') {
@@ -1102,8 +1107,11 @@
                     const angle = (Math.PI * 2 / 10) * i;
                     shoot(player, true, new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle)));
                 }
-                isSkillActive = false;
+            } else {
+                // BIKE: ニトロ高速ダッシュ
+                playerSpeed = maxSpeed * 2.5;
             }
+            isSkillActive = false;
         }
 
         function createExplosion(pos) {
@@ -1136,7 +1144,7 @@
         }
 
         function animate() {
-            requestAnimationFrame(animate);
+            animationFrameId = requestAnimationFrame(animate);
 
             if (gameState !== 'PLAYING') return;
 
@@ -1145,17 +1153,13 @@
                     type: 'SYNC_POS',
                     x: player.position.x,
                     z: player.position.z,
-                    rotY: player.rotation.y,
-                    hp: playerHp,
-                    machine: selectedMachine,
-                    color: selectedColorHex,
-                    maxHp: maxHp
+                    rotY: player.rotation.y
                 });
 
                 if (remoteEnemyMesh) {
-                    remoteEnemyMesh.position.x += (remotePlayerData.x - remoteEnemyMesh.position.x) * 0.3;
-                    remoteEnemyMesh.position.z += (remotePlayerData.z - remoteEnemyMesh.position.z) * 0.3;
-                    remoteEnemyMesh.rotation.y = remotePlayerData.rotY;
+                    remoteEnemyMesh.position.x += (remoteTargetPos.x - remoteEnemyMesh.position.x) * 0.3;
+                    remoteEnemyMesh.position.z += (remoteTargetPos.z - remoteEnemyMesh.position.z) * 0.3;
+                    remoteEnemyMesh.rotation.y = remoteTargetPos.rotY;
                 }
             }
 
@@ -1179,8 +1183,9 @@
             const oldPos = player.position.clone();
             player.translateZ(playerSpeed);
 
+            const playerRadius = selectedMachine === 'TANK' ? 2.0 : 1.2;
             obstacles.forEach(o => {
-                if (player.position.distanceTo(o.position) < o.userData.radius) {
+                if (player.position.distanceTo(o.position) < (o.userData.radius + playerRadius)) {
                     player.position.copy(oldPos); playerSpeed = 0;
                 }
             });
@@ -1210,21 +1215,32 @@
                         const enemy = enemies[j];
                         if (b.position.distanceTo(enemy.position.clone().add(new THREE.Vector3(0, 0.8, 0))) < (b.userData.hitRadius + enemy.userData.radius)) {
                             createExplosion(b.position);
-                            enemy.userData.hp -= b.userData.damage;
+                            
+                            if (playMode === 'ONLINE' && enemy === remoteEnemyMesh) {
+                                sendNetworkData({ type: 'TAKE_DAMAGE', amount: b.userData.damage });
+                            } else {
+                                enemy.userData.hp -= b.userData.damage;
+                            }
+
                             skillGauge = Math.min(100, skillGauge + 12); updateSkillUI();
 
-                            const fill = document.getElementById(`hp-fill-${j}`);
+                            const enemyId = enemy.userData.id;
+                            const fill = document.getElementById(`hp-fill-${enemyId}`);
                             if (fill) fill.style.width = Math.max(0, (enemy.userData.hp / enemy.userData.maxHp) * 100) + '%';
 
                             if (enemy.userData.hp <= 0) {
-                                createExplosion(enemy.position); scene.remove(enemy); enemies.splice(j, 1);
+                                createExplosion(enemy.position);
+                                const card = document.getElementById(`card-${enemyId}`);
+                                if (card) card.remove();
+                                scene.remove(enemy);
+                                enemies.splice(j, 1);
                                 if (enemies.length === 0) triggerGameEnd(true);
                             }
                             scene.remove(b); bullets.splice(i, 1); break;
                         }
                     }
                 } else {
-                    if (b.position.distanceTo(player.position.clone().add(new THREE.Vector3(0, 0.8, 0))) < 2.2) {
+                    if (b.position.distanceTo(player.position.clone().add(new THREE.Vector3(0, 0.8, 0))) < 2.0) {
                         createExplosion(b.position); damagePlayer(b.userData.damage);
                         scene.remove(b); bullets.splice(i, 1); continue;
                     }
@@ -1262,6 +1278,7 @@
         }
 
         function damagePlayer(amount) {
+            if (gameState !== 'PLAYING') return;
             playerHp = Math.max(0, playerHp - amount);
             updatePlayerHPUI();
             if (playerHp <= 0) triggerGameEnd(false);
@@ -1279,7 +1296,7 @@
 
         function triggerGameEnd(isWin) {
             gameState = isWin ? 'VICTORY' : 'DEFEAT';
-            clearInterval(bgmInterval);
+            if (bgmInterval) clearInterval(bgmInterval);
 
             setTimeout(() => {
                 const screen = document.getElementById('result-screen');
@@ -1290,13 +1307,38 @@
             }, 800);
         }
 
+        function resetAndRestart() {
+            // クリーンアップ処理
+            document.getElementById('result-screen').style.display = 'none';
+            document.getElementById('hud').style.display = 'none';
+            document.getElementById('select-screen').style.display = 'flex';
+
+            if (player) { scene.remove(player); player = null; }
+            enemies.forEach(e => scene.remove(e));
+            enemies.length = 0;
+            bullets.forEach(b => scene.remove(b));
+            bullets.length = 0;
+            particles.forEach(p => scene.remove(p));
+            particles.length = 0;
+            document.getElementById('enemy-hp-container').innerHTML = '';
+
+            gameState = 'SELECT';
+        }
+
         function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
         }
 
         initEngine();
     </script>
 </body>
-</html>
+</html>"""
+
+with open("opposition_war_fixed.html", "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+print("File generated successfully: opposition_war_fixed.html")
