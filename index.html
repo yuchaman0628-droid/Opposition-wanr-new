@@ -1,4 +1,4 @@
-html_content = '''<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -187,7 +187,7 @@ html_content = '''<!DOCTYPE html>
             background: #000;
             color: #fff;
             font-size: 14px;
-            width: 140px;
+            width: 130px;
             text-align: center;
             letter-spacing: 2px;
         }
@@ -409,7 +409,7 @@ html_content = '''<!DOCTYPE html>
             
             <div class="online-input-group">
                 <button onclick="hostOnlineRoom()">部屋を作成</button>
-                <input type="text" id="join-room-id" placeholder="6桁の部屋IDを入力" maxlength="6">
+                <input type="text" id="join-room-id" placeholder="4桁の部屋ID" maxlength="4">
                 <button onclick="joinOnlineRoom()" style="background:#0088cc;">参加</button>
             </div>
             <div id="online-status">モードを選択してください</div>
@@ -599,7 +599,7 @@ html_content = '''<!DOCTYPE html>
         }
 
         // --- ONLINE MULTIPLAYER PEERJS ENGINE ---
-        let playMode = 'OFFLINE'; // 'OFFLINE' | 'ONLINE'
+        let playMode = 'OFFLINE';
         let peer = null, conn = null;
         let isHost = false, roomCode = '';
         let remotePlayerData = { x: 0, z: 0, rotY: 0, hp: 100, isShooting: false, machineType: 'BIKE' };
@@ -613,13 +613,13 @@ html_content = '''<!DOCTYPE html>
         }
 
         function initPeerJS() {
-            // 6桁の数字部屋IDを作成 (100000 〜 999999)
-            const shortId = Math.floor(100000 + Math.random() * 900000).toString();
+            // 4桁の数字部屋IDを作成 (1000 〜 9999)
+            const shortId = Math.floor(1000 + Math.random() * 9000).toString();
             peer = new Peer(shortId);
 
             peer.on('open', id => {
                 document.getElementById('my-peer-id').innerText = id;
-                document.getElementById('online-status').innerText = 'ルーム作成または6桁のID入力で参加してください';
+                document.getElementById('online-status').innerText = 'ルーム作成または4桁のID入力で参加してください';
             });
 
             peer.on('connection', c => {
@@ -637,13 +637,13 @@ html_content = '''<!DOCTYPE html>
         function hostOnlineRoom() {
             if (!peer) return;
             const id = document.getElementById('my-peer-id').innerText;
-            document.getElementById('online-status').innerText = `部屋を作成しました！対戦相手に6桁のID [ ${id} ] を共有してください`;
+            document.getElementById('online-status').innerText = `部屋を作成しました！対戦相手に4桁のID [ ${id} ] を共有してください`;
         }
 
         function joinOnlineRoom() {
             const targetId = document.getElementById('join-room-id').value.trim();
-            if (!targetId || targetId.length !== 6 || !peer) {
-                alert('6桁の部屋IDを入力してください');
+            if (!targetId || targetId.length !== 4 || !peer) {
+                alert('4桁の部屋IDを入力してください');
                 return;
             }
             document.getElementById('online-status').innerText = `ID: ${targetId} へ接続中...`;
@@ -702,14 +702,14 @@ html_content = '''<!DOCTYPE html>
         let skillGauge = 0, isSkillActive = false, skillTimer = 0;
         let camShake = 0;
 
-        const bullets = [], enemies = [], particles = [], obstacles = [], items = [];
+        const bullets = [], enemies = [], particles = [], obstacles = [];
         let remoteEnemyMesh = null;
         const keys = {};
-        let gameState = 'SELECT', endAnimTimer = 0;
+        let gameState = 'SELECT';
 
         // Mobile Touch Control Variables
         let touchMoveX = 0, touchMoveY = 0;
-        let touchShoot = false, touchBoost = false;
+        let touchBoost = false;
 
         function setupMobileControls() {
             const zone = document.getElementById('joystick-zone');
@@ -754,11 +754,10 @@ html_content = '''<!DOCTYPE html>
                 const ky = Math.sin(angle) * r;
                 knob.style.transform = `translate(${kx}px, ${ky}px)`;
 
-                touchMoveX = kx / maxR; // -1 to 1 (Turning)
-                touchMoveY = -ky / maxR; // -1 to 1 (Forward/Back)
+                touchMoveX = kx / maxR;
+                touchMoveY = -ky / maxR;
             }
 
-            // Buttons
             const btnShoot = document.getElementById('btn-shoot');
             const btnBoost = document.getElementById('btn-boost');
             const btnSkill = document.getElementById('btn-skill');
@@ -773,7 +772,6 @@ html_content = '''<!DOCTYPE html>
             const bike = new THREE.Group();
             const color = isEnemy ? 0xdd2222 : bodyColor;
             const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.15, metalness: 0.8 });
-            const frameMat = new THREE.MeshStandardMaterial({ color: 0x111116, roughness: 0.6 });
             const chromeMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.95, roughness: 0.05 });
             const tireMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.85 });
 
@@ -803,44 +801,131 @@ html_content = '''<!DOCTYPE html>
             return bike;
         }
 
+        // --- リアルな戦車の作成 ---
         function createDetailedTank(bodyColor = 0x2e4020, isEnemy = false) {
             const tank = new THREE.Group();
             const color = isEnemy ? 0x662222 : bodyColor;
-            const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.6 });
-            const darkMat = new THREE.MeshStandardMaterial({ color: 0x111116 });
+            const armorMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4, metalness: 0.5 });
+            const darkMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1c, roughness: 0.7, metalness: 0.3 });
+            const metalMat = new THREE.MeshStandardMaterial({ color: 0x333338, roughness: 0.3, metalness: 0.8 });
 
-            const body = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.0, 4.8), bodyMat);
-            body.position.y = 0.8; tank.add(body);
+            // 下部車体
+            const lowerHull = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.7, 4.6), armorMat);
+            lowerHull.position.y = 0.65;
+            tank.add(lowerHull);
 
-            [-1.7, 1.7].forEach(x => {
-                const tread = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, 5.0), darkMat);
-                tread.position.set(x, 0.65, 0); tank.add(tread);
+            // 上部車体 (傾斜装甲)
+            const upperHull = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.5, 3.8), armorMat);
+            upperHull.position.set(0, 1.15, -0.2);
+            upperHull.rotation.x = -0.05;
+            tank.add(upperHull);
+
+            // 履帯・ロードホイール（転輪）
+            [-1.65, 1.65].forEach(x => {
+                const tread = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.85, 4.8), darkMat);
+                tread.position.set(x, 0.55, 0);
+                tank.add(tread);
+
+                // サイドスカート
+                const skirt = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.6, 4.4), armorMat);
+                skirt.position.set(x > 0 ? x + 0.35 : x - 0.35, 0.7, 0);
+                tank.add(skirt);
+
+                // ホイール配列
+                for (let z = -1.8; z <= 1.8; z += 0.9) {
+                    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.2, 12), metalMat);
+                    wheel.rotation.z = Math.PI / 2;
+                    wheel.position.set(x, 0.4, z);
+                    tank.add(wheel);
+                }
             });
 
+            // 砲塔グループ
             const turret = new THREE.Group();
-            turret.position.set(0, 1.3, 0);
-            const tMesh = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.8, 2.2), bodyMat);
+            turret.position.set(0, 1.5, -0.2);
+
+            // メイン砲塔
+            const tMesh = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.75, 2.4), armorMat);
+            tMesh.position.y = 0.35;
             turret.add(tMesh);
 
-            const cannon = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 3.5), darkMat);
-            cannon.rotation.x = Math.PI / 2; cannon.position.set(0, 0.2, 2.0);
+            // キューポラ (ハッチ)
+            const hatch = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.15, 12), darkMat);
+            hatch.position.set(0.5, 0.8, -0.3);
+            turret.add(hatch);
+
+            // 主砲防盾 (防盾カバー)
+            const mantlet = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.5), metalMat);
+            mantlet.position.set(0, 0.35, 1.3);
+            turret.add(mantlet);
+
+            // 主砲砲身
+            const cannon = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 3.8, 12), darkMat);
+            cannon.rotation.x = Math.PI / 2;
+            cannon.position.set(0, 0.35, 3.1);
             turret.add(cannon);
+
+            // マズルブレーキ (砲口先端部)
+            const muzzle = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.5, 12), metalMat);
+            muzzle.rotation.x = Math.PI / 2;
+            muzzle.position.set(0, 0.35, 5.1);
+            turret.add(muzzle);
 
             tank.add(turret);
             if (!isEnemy) { playerTurret = turret; playerCannon = cannon; }
             return tank;
         }
 
+        // --- リアルな岩障害物の作成 ---
+        function createRockGeometry(radius) {
+            const geo = new THREE.DodecahedronGeometry(radius, 1);
+            const pos = geo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                const x = pos.getX(i);
+                const y = pos.getY(i);
+                const z = pos.getZ(i);
+                const factor = 1 + (Math.random() - 0.5) * 0.35;
+                pos.setXYZ(i, x * factor, y * factor * 0.8, z * factor);
+            }
+            geo.computeVertexNormals();
+            return geo;
+        }
+
         function createMapObstacles() {
-            const mat = new THREE.MeshStandardMaterial({ color: 0x223344, roughness: 0.8 });
-            for (let i = 0; i < 16; i++) {
-                const w = 6 + Math.random() * 6, h = 4 + Math.random() * 8, d = 6 + Math.random() * 6;
-                const obs = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+            const rockMat = new THREE.MeshStandardMaterial({
+                color: 0x5a5d64,
+                roughness: 0.9,
+                metalness: 0.1,
+                flatShading: true
+            });
+
+            for (let i = 0; i < 18; i++) {
+                const rockGroup = new THREE.Group();
+                const numSubRocks = 1 + Math.floor(Math.random() * 3);
+                let maxRadius = 0;
+
+                for (let j = 0; j < numSubRocks; j++) {
+                    const r = 3 + Math.random() * 4.5;
+                    if (r > maxRadius) maxRadius = r;
+                    const rockGeo = createRockGeometry(r);
+                    const rockMesh = new THREE.Mesh(rockGeo, rockMat);
+                    rockMesh.position.set(
+                        (Math.random() - 0.5) * r * 0.8,
+                        r * 0.35,
+                        (Math.random() - 0.5) * r * 0.8
+                    );
+                    rockMesh.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+                    rockMesh.castShadow = true;
+                    rockMesh.receiveShadow = true;
+                    rockGroup.add(rockMesh);
+                }
+
                 const angle = Math.random() * Math.PI * 2;
-                const dist = 25 + Math.random() * 60;
-                obs.position.set(Math.sin(angle) * dist, h / 2, Math.cos(angle) * dist);
-                obs.userData = { radius: Math.max(w, d) / 2 + 1.2 };
-                scene.add(obs); obstacles.push(obs);
+                const dist = 25 + Math.random() * 65;
+                rockGroup.position.set(Math.sin(angle) * dist, 0, Math.cos(angle) * dist);
+                rockGroup.userData = { radius: maxRadius + 1.2 };
+                scene.add(rockGroup);
+                obstacles.push(rockGroup);
             }
         }
 
@@ -901,7 +986,6 @@ html_content = '''<!DOCTYPE html>
                 spawnEnemy('BIKE', 'AI_RIDER_A');
                 spawnEnemy('TANK', 'AI_TANK_B');
             } else {
-                // Online Enemy Spawn
                 const remoteType = selectedMachine === 'TANK' ? 'BIKE' : 'TANK';
                 remoteEnemyMesh = remoteType === 'BIKE' ? createRealBike(0xff2222, true) : createDetailedTank(0x662222, true);
                 remoteEnemyMesh.userData = { type: remoteType, hp: 100, maxHp: 100, radius: 2.5 };
@@ -1022,7 +1106,6 @@ html_content = '''<!DOCTYPE html>
 
             if (gameState !== 'PLAYING') return;
 
-            // Online Position Sync
             if (playMode === 'ONLINE') {
                 sendNetworkData({
                     type: 'SYNC_POS',
@@ -1039,7 +1122,6 @@ html_content = '''<!DOCTYPE html>
                 }
             }
 
-            // Controls (Keyboard + Mobile Joystick)
             let moveY = touchMoveY;
             let turnX = -touchMoveX;
 
@@ -1068,7 +1150,6 @@ html_content = '''<!DOCTYPE html>
 
             if (skillGauge < 100) { skillGauge = Math.min(100, skillGauge + 0.08); updateSkillUI(); }
 
-            // Camera follow + shake
             const camDist = selectedMachine === 'TANK' ? -14 : -9;
             const camHeight = selectedMachine === 'TANK' ? 7 : 4;
             const camOffset = new THREE.Vector3(0, camHeight, camDist).applyQuaternion(player.quaternion);
@@ -1082,7 +1163,6 @@ html_content = '''<!DOCTYPE html>
             camera.position.copy(player.position).add(camOffset);
             camera.lookAt(player.position.clone().add(new THREE.Vector3(0, 1.0, 0)));
 
-            // Bullets
             for (let i = bullets.length - 1; i >= 0; i--) {
                 const b = bullets[i];
                 b.position.add(b.userData.velocity);
@@ -1116,7 +1196,6 @@ html_content = '''<!DOCTYPE html>
                 if (b.userData.life <= 0 && bullets[i]) { scene.remove(b); bullets.splice(i, 1); }
             }
 
-            // AI Enemies (Offline Mode)
             if (playMode === 'OFFLINE') {
                 enemies.forEach(enemy => {
                     enemy.lookAt(player.position);
@@ -1134,7 +1213,6 @@ html_content = '''<!DOCTYPE html>
                 });
             }
 
-            // Particles
             for (let i = particles.length - 1; i >= 0; i--) {
                 const p = particles[i];
                 p.position.add(p.userData.vel); p.userData.life--;
@@ -1185,9 +1263,3 @@ html_content = '''<!DOCTYPE html>
     </script>
 </body>
 </html>
-'''
-
-with open("opposition_war_v2.html", "w", encoding="utf-8") as f:
-    f.write(html_content)
-
-print("File created successfully: opposition_war_v2.html")
