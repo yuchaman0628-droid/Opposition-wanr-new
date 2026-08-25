@@ -1,9 +1,9 @@
-html_content = """<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Opposition‐WAR Custom Online & Mobile (Fixed)</title>
+    <title>Opposition‐WAR Custom Online & Mobile</title>
     <style>
         * {
             box-sizing: border-box;
@@ -246,18 +246,17 @@ html_content = """<!DOCTYPE html>
         .leaderboard-table th { color: #00ffcc; }
 
         /* HUD & MOBILE CONTROLS */
-        #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; z-index: 10; }
+        #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; }
         
         #enemy-hp-container {
             position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+            display: flex; gap: 8px;
         }
         .enemy-hp-card {
             background: rgba(0,0,0,0.75); border: 1px solid #ff3333;
             padding: 4px 8px; border-radius: 5px; width: 110px; text-align: center; color: #fff;
-            font-family: sans-serif; font-size: 10px;
         }
-        .enemy-hp-bar-bg { width: 100%; height: 6px; background: #333; border-radius: 2px; overflow: hidden; margin-top: 2px; }
+        .enemy-hp-bar-bg { width: 100%; height: 6px; background: #333; border-radius: 2px; overflow: hidden; }
         .enemy-hp-bar-fill { width: 100%; height: 100%; background: #ff3300; transition: width 0.1s; }
 
         /* Minimap */
@@ -272,7 +271,7 @@ html_content = """<!DOCTYPE html>
         #player-hp-container {
             position: absolute; top: 12px; left: 12px;
             width: 160px; background: rgba(0,0,0,0.8); border: 1.5px solid #00ffcc;
-            border-radius: 6px; padding: 6px 10px; text-align: center; font-family: sans-serif;
+            border-radius: 6px; padding: 6px 10px; text-align: center;
         }
         .player-hp-header { display: flex; justify-content: space-between; color: #00ffcc; font-size: 11px; margin-bottom: 2px; }
         .player-hp-bar-bg { width: 100%; height: 10px; background: #112222; border-radius: 3px; overflow: hidden; border: 1px solid #00ffcc; margin-bottom: 4px; }
@@ -337,7 +336,6 @@ html_content = """<!DOCTYPE html>
             box-shadow: 0 0 12px rgba(0,0,0,0.5);
             touch-action: none;
             user-select: none;
-            cursor: pointer;
         }
         .btn-touch-action:active { transform: scale(0.92); }
 
@@ -379,33 +377,28 @@ html_content = """<!DOCTYPE html>
             padding: 2px 8px;
             border-radius: 10px;
             display: none;
-            font-family: sans-serif;
         }
 
         /* Result Screen */
-        #result-screen { display: none; text-align: center; z-index: 150; justify-content: center; }
+        #result-screen { display: none; text-align: center; z-index: 150; }
         #result-title { font-size: clamp(40px, 10vw, 72px); margin-bottom: 10px; text-shadow: 0 0 30px rgba(255,255,255,0.8); }
-        .btn-retry { padding: 12px 35px; font-size: 20px; background: #00aaff; border: none; color: #fff; cursor: pointer; font-weight: bold; border-radius: 4px; box-shadow: 0 0 15px rgba(0,170,255,0.6); }
+        .btn-retry { padding: 12px 35px; font-size: 20px; background: #00aaff; border: none; color: #fff; cursor: pointer; font-weight: bold; border-radius: 4px; }
     </style>
 
-    <!-- Three.js & PeerJS for WebRTC Online Multiplayer -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
 
-    <!-- 1. MAIN SELECT / LOBBY SCREEN -->
     <div id="select-screen" class="overlay-screen">
         <h1>Opposition‐WAR</h1>
-        <p class="subtitle">ONLINE & MOBILE MULTIPLAYER (FIXED)</p>
+        <p class="subtitle">ONLINE & MOBILE MULTIPLAYER</p>
 
-        <!-- Mode Select -->
         <div class="mode-container">
             <div id="mode-OFFLINE" class="mode-btn active" onclick="selectPlayMode('OFFLINE')">🎮 ソロ / AI対戦</div>
             <div id="mode-ONLINE" class="mode-btn" onclick="selectPlayMode('ONLINE')">🌐 オンライン対戦</div>
         </div>
 
-        <!-- Online Room Setup Panel -->
         <div id="online-panel">
             <div style="color:#00ffcc; font-weight:bold; margin-bottom:4px;">オンラインルーム作成 / 参加 (Peer2Peer)</div>
             <div>あなたのID: <span id="my-peer-id" style="color:#ffff00; font-weight:bold;">接続中...</span></div>
@@ -418,19 +411,17 @@ html_content = """<!DOCTYPE html>
             <div id="online-status">モードを選択してください</div>
         </div>
 
-        <!-- Machine Select -->
         <div class="panel-container">
             <div id="card-TANK" class="select-card active" onclick="selectMachine('TANK')">
                 <h2>重戦車 (TANK)</h2>
-                <p>高耐久 & 360°全方位連射</p>
+                <p>高耐久 & 360°ミサイル</p>
             </div>
             <div id="card-BIKE" class="select-card" onclick="selectMachine('BIKE')">
                 <h2>バイク (BIKE)</h2>
-                <p>超高速 & 高機動ブースト</p>
+                <p>超高速 & ニトロバースト</p>
             </div>
         </div>
 
-        <!-- Custom Spec & Color -->
         <div class="custom-section">
             <div class="custom-title">1. 車体カラー (BODY COLOR)</div>
             <div class="color-picker">
@@ -451,7 +442,6 @@ html_content = """<!DOCTYPE html>
 
         <button class="btn-start" onclick="startGame()">BATTLE START</button>
 
-        <!-- Leaderboard -->
         <div class="leaderboard-box">
             <div style="color:#00ffcc; font-weight:bold; margin-bottom:2px;">🏆 オンライン / ローカルランキング</div>
             <table class="leaderboard-table">
@@ -467,7 +457,6 @@ html_content = """<!DOCTYPE html>
         </div>
     </div>
 
-    <!-- 2. IN-GAME HUD & MOBILE CONTROLS -->
     <div id="hud">
         <div id="player-hp-container">
             <div class="player-hp-header">
@@ -491,16 +480,13 @@ html_content = """<!DOCTYPE html>
             <canvas id="minimap" width="90" height="90"></canvas>
         </div>
 
-        <div id="net-ping">ONLINE CONNECTED</div>
+        <div id="net-ping">ONLINE PING: 24ms</div>
 
-        <!-- Touch Controls overlay -->
         <div id="mobile-controls">
-            <!-- Left Virtual Joystick -->
             <div id="joystick-zone">
                 <div id="joystick-knob"></div>
             </div>
 
-            <!-- Right Action Buttons -->
             <div id="action-buttons">
                 <button id="btn-shoot" class="btn-touch-action">FIRE</button>
                 <div class="small-btn-row">
@@ -511,10 +497,9 @@ html_content = """<!DOCTYPE html>
         </div>
     </div>
 
-    <!-- 3. RESULT SCREEN -->
     <div id="result-screen" class="overlay-screen">
         <div id="result-title">VICTORY</div>
-        <button class="btn-retry" onclick="resetAndRestart()">RETRY</button>
+        <button class="btn-retry" onclick="location.reload()">RETRY</button>
     </div>
 
     <script>
@@ -529,8 +514,8 @@ html_content = """<!DOCTYPE html>
                 seGainNode = audioCtx.createGain();
                 bgmGainNode.connect(audioCtx.destination);
                 seGainNode.connect(audioCtx.destination);
-                bgmGainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                seGainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                bgmGainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                seGainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
             }
             if (audioCtx.state === 'suspended') audioCtx.resume();
         }
@@ -541,17 +526,17 @@ html_content = """<!DOCTYPE html>
             const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
             osc.type = isHeavy ? 'sawtooth' : 'square';
             osc.frequency.setValueAtTime(isHeavy ? 150 : 600, now);
-            osc.frequency.exponentialRampToValueAtTime(30, now + (isHeavy ? 0.25 : 0.08));
-            gain.gain.setValueAtTime(0.5, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + (isHeavy ? 0.25 : 0.08));
+            osc.frequency.exponentialRampToValueAtTime(30, now + (isHeavy ? 0.3 : 0.1));
+            gain.gain.setValueAtTime(0.7, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + (isHeavy ? 0.3 : 0.1));
             osc.connect(gain); gain.connect(seGainNode);
-            osc.start(now); osc.stop(now + (isHeavy ? 0.25 : 0.08));
+            osc.start(now); osc.stop(now + (isHeavy ? 0.3 : 0.1));
         }
 
         function playExplosionSound() {
             if (!audioCtx) return;
             const now = audioCtx.currentTime;
-            const bufferSize = Math.floor(audioCtx.sampleRate * 0.35);
+            const bufferSize = audioCtx.sampleRate * 0.4;
             const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
             const data = buffer.getChannelData(0);
             for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
@@ -560,11 +545,11 @@ html_content = """<!DOCTYPE html>
             noise.buffer = buffer;
             const filter = audioCtx.createBiquadFilter();
             filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(250, now);
-            filter.frequency.exponentialRampToValueAtTime(20, now + 0.35);
+            filter.frequency.setValueAtTime(300, now);
+            filter.frequency.exponentialRampToValueAtTime(20, now + 0.4);
             const gain = audioCtx.createGain();
-            gain.gain.setValueAtTime(0.8, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+            gain.gain.setValueAtTime(0.9, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
 
             noise.connect(filter); filter.connect(gain); gain.connect(seGainNode);
             noise.start(now);
@@ -577,15 +562,14 @@ html_content = """<!DOCTYPE html>
             osc.type = 'sine';
             osc.frequency.setValueAtTime(300, now);
             osc.frequency.exponentialRampToValueAtTime(1200, now + 0.4);
-            gain.gain.setValueAtTime(0.5, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            gain.gain.setValueAtTime(0.6, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
             osc.connect(gain); gain.connect(seGainNode);
-            osc.start(now); osc.stop(now + 0.4);
+            osc.start(now); osc.stop(now + 0.45);
         }
 
         function startBGM() {
             if (!audioCtx) return;
-            if (bgmInterval) clearInterval(bgmInterval);
             let step = 0;
             const notes = [110, 110, 130, 110, 146, 130, 110, 98];
             bgmInterval = setInterval(() => {
@@ -594,20 +578,19 @@ html_content = """<!DOCTYPE html>
                 const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(notes[step % notes.length], now);
-                gain.gain.setValueAtTime(0.15, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
                 osc.connect(gain); gain.connect(bgmGainNode);
-                osc.start(now); osc.stop(now + 0.18);
+                osc.start(now); osc.stop(now + 0.2);
                 step++;
             }, 180);
         }
 
-        // --- ONLINE MULTIPLAYER PEERJS ENGINE (FIXED) ---
+        // --- ONLINE MULTIPLAYER PEERJS ENGINE ---
         let playMode = 'OFFLINE';
         let peer = null, conn = null;
-        let myShortId = '';
-        let isHost = false;
-        let remoteTargetPos = { x: 0, z: 0, rotY: 0 };
+        let isHost = false, roomCode = '';
+        let remotePlayerData = { x: 0, z: 0, rotY: 0, hp: 100, isShooting: false, machineType: 'TANK' };
 
         function selectPlayMode(mode) {
             playMode = mode;
@@ -618,14 +601,12 @@ html_content = """<!DOCTYPE html>
         }
 
         function initPeerJS() {
-            myShortId = Math.floor(1000 + Math.random() * 9000).toString();
-            const fullPeerId = 'oppwar-room-' + myShortId;
-            
-            peer = new Peer(fullPeerId);
+            const shortId = Math.floor(1000 + Math.random() * 9000).toString();
+            peer = new Peer(shortId);
 
             peer.on('open', id => {
-                document.getElementById('my-peer-id').innerText = myShortId;
-                document.getElementById('online-status').innerText = '部屋作成または4桁のID入力で参加してください';
+                document.getElementById('my-peer-id').innerText = id;
+                document.getElementById('online-status').innerText = 'ルーム作成または4桁のID入力で参加してください';
             });
 
             peer.on('connection', c => {
@@ -642,7 +623,8 @@ html_content = """<!DOCTYPE html>
 
         function hostOnlineRoom() {
             if (!peer) return;
-            document.getElementById('online-status').innerText = `部屋を作成しました！対戦相手に4桁のID [ ${myShortId} ] を共有してください`;
+            const id = document.getElementById('my-peer-id').innerText;
+            document.getElementById('online-status').innerText = `部屋を作成しました！対戦相手に4桁のID [ ${id} ] を共有してください`;
         }
 
         function joinOnlineRoom() {
@@ -652,8 +634,7 @@ html_content = """<!DOCTYPE html>
                 return;
             }
             document.getElementById('online-status').innerText = `ID: ${targetId} へ接続中...`;
-            const fullTargetPeerId = 'oppwar-room-' + targetId;
-            conn = peer.connect(fullTargetPeerId);
+            conn = peer.connect(targetId);
             isHost = false;
             setupConnection();
         }
@@ -662,32 +643,40 @@ html_content = """<!DOCTYPE html>
             conn.on('open', () => {
                 document.getElementById('online-status').innerText = 'オンライン接続成功！バトルを開始できます';
                 document.getElementById('net-ping').style.display = 'block';
-
-                // 初期状態の送信
-                sendNetworkData({
-                    type: 'INIT_PLAYER',
-                    machine: selectedMachine,
-                    color: selectedColorHex,
-                    maxHp: maxHp
-                });
             });
 
             conn.on('data', data => {
                 if (data.type === 'INIT_PLAYER') {
                     setupRemoteEnemy(data.machine, data.color, data.maxHp);
+                    if (gameState === 'PLAYING') {
+                        sendNetworkData({
+                            type: 'INIT_PLAYER',
+                            machine: selectedMachine,
+                            color: selectedColorHex,
+                            maxHp: maxHp
+                        });
+                    }
                 } else if (data.type === 'SYNC_POS') {
                     if (!remoteEnemyMesh && data.machine) {
                         setupRemoteEnemy(data.machine, data.color, data.maxHp);
                     }
                     if (remoteEnemyMesh) {
-                        remoteTargetPos.x = data.x;
-                        remoteTargetPos.z = data.z;
-                        remoteTargetPos.rotY = data.rotY;
+                        remoteEnemyMesh.position.x += (data.x - remoteEnemyMesh.position.x) * 0.3;
+                        remoteEnemyMesh.position.z += (data.z - remoteEnemyMesh.position.z) * 0.3;
+                        remoteEnemyMesh.rotation.y = data.rotY;
                     }
                 } else if (data.type === 'SHOOT') {
-                    if (remoteEnemyMesh) shoot(remoteEnemyMesh, false);
-                } else if (data.type === 'TAKE_DAMAGE') {
-                    damagePlayer(data.amount);
+                    // 相手が撃った弾を同期生成
+                    if (remoteEnemyMesh) {
+                        spawnNetworkBullet(data.x, data.y, data.z, data.vx, data.vy, data.vz, data.isHeavy);
+                    }
+                } else if (data.type === 'HIT') {
+                    // 相手の画面で攻撃が当たった通知を受信してダメージを受ける
+                    damagePlayer(data.damage);
+                    if (player) createExplosion(player.position);
+                } else if (data.type === 'GAME_OVER') {
+                    // 相手のHPが0になった通知を受けたので勝利
+                    triggerGameEnd(true);
                 }
             });
         }
@@ -724,14 +713,13 @@ html_content = """<!DOCTYPE html>
         let player, playerTurret, playerCannon, rearWheelMesh;
         let playerHp = 100, maxHp = 100, attackDamage = 15, cooldownMult = 1.0;
         let playerSpeed = 0, maxSpeed = 0.22, rotSpeed = 0.025;
-        let skillGauge = 0, isSkillActive = false;
+        let skillGauge = 0, isSkillActive = false, skillTimer = 0;
         let camShake = 0;
 
         const bullets = [], enemies = [], particles = [], obstacles = [];
         let remoteEnemyMesh = null;
         const keys = {};
         let gameState = 'SELECT';
-        let animationFrameId = null;
 
         // Mobile Touch Control Variables
         let touchMoveX = 0, touchMoveY = 0;
@@ -979,21 +967,20 @@ html_content = """<!DOCTYPE html>
 
             const color = colorHex || 0xff2222;
             const hp = enemyMaxHp || (machineType === 'TANK' ? 100 : 60);
-            const enemyId = 'remote-enemy-player';
 
             if (machineType === 'TANK') {
                 remoteEnemyMesh = createDetailedTank(color, true);
-                remoteEnemyMesh.userData = { id: enemyId, type: 'TANK', name: 'RIVAL ONLINE', hp: hp, maxHp: hp, radius: 2.2 };
+                remoteEnemyMesh.userData = { type: 'TANK', name: 'RIVAL ONLINE', hp: hp, maxHp: hp, radius: 3.5 };
             } else {
                 remoteEnemyMesh = createRealBike(color, true);
-                remoteEnemyMesh.userData = { id: enemyId, type: 'BIKE', name: 'RIVAL ONLINE', hp: hp, maxHp: hp, radius: 1.5 };
+                remoteEnemyMesh.userData = { type: 'BIKE', name: 'RIVAL ONLINE', hp: hp, maxHp: hp, radius: 2.2 };
             }
 
             scene.add(remoteEnemyMesh);
             enemies.push(remoteEnemyMesh);
 
             const container = document.getElementById('enemy-hp-container');
-            container.innerHTML = `<div class="enemy-hp-card" id="card-${enemyId}"><div>RIVAL ONLINE</div><div class="enemy-hp-bar-bg"><div class="enemy-hp-bar-fill" id="hp-fill-${enemyId}"></div></div></div>`;
+            container.innerHTML = `<div class="enemy-hp-card"><div>RIVAL ONLINE</div><div class="enemy-hp-bar-bg"><div class="enemy-hp-bar-fill" id="hp-fill-0"></div></div></div>`;
         }
 
         function startGame() {
@@ -1035,20 +1022,19 @@ html_content = """<!DOCTYPE html>
 
             startBGM();
             gameState = 'PLAYING';
-            if (!animationFrameId) animate();
+            animate();
         }
 
         function spawnEnemy(type, name) {
             let enemyObj;
-            const angle = Math.random() * Math.PI * 2, dist = 45 + Math.random() * 20;
-            const enemyId = 'enemy-' + Math.random().toString(36).substr(2, 9);
+            const angle = Math.random() * Math.PI * 2, dist = 55 + Math.random() * 20;
 
             if (type === 'BIKE') {
                 enemyObj = createRealBike(0xdd2222, true);
-                enemyObj.userData = { id: enemyId, type: 'BIKE', name: name, hp: 45, maxHp: 45, speed: 0.24, radius: 1.5 };
+                enemyObj.userData = { type: 'BIKE', name: name, hp: 45, maxHp: 45, speed: 0.24, radius: 2.2 };
             } else {
                 enemyObj = createDetailedTank(0x662222, true);
-                enemyObj.userData = { id: enemyId, type: 'TANK', name: name, hp: 130, maxHp: 130, speed: 0.09, radius: 2.2, shootCooldown: 0 };
+                enemyObj.userData = { type: 'TANK', name: name, hp: 130, maxHp: 130, speed: 0.09, radius: 3.5, shootCooldown: 0 };
             }
 
             enemyObj.position.x = Math.sin(angle) * dist;
@@ -1058,8 +1044,7 @@ html_content = """<!DOCTYPE html>
             const container = document.getElementById('enemy-hp-container');
             const card = document.createElement('div');
             card.className = 'enemy-hp-card';
-            card.id = `card-${enemyId}`;
-            card.innerHTML = `<div>${name}</div><div class="enemy-hp-bar-bg"><div class="enemy-hp-bar-fill" id="hp-fill-${enemyId}"></div></div>`;
+            card.innerHTML = `<div>${name}</div><div class="enemy-hp-bar-bg"><div class="enemy-hp-bar-fill" id="hp-fill-${enemies.indexOf(enemyObj)}"></div></div>`;
             container.appendChild(card);
         }
 
@@ -1075,31 +1060,63 @@ html_content = """<!DOCTYPE html>
             playShootSound(isHeavy);
             if (isPlayer) {
                 camShake = Math.min(camShake + (isHeavy ? 0.3 : 0.08), 0.8);
-                if (playMode === 'ONLINE') sendNetworkData({ type: 'SHOOT' });
             }
+
+            const dir = customDir || new THREE.Vector3(0, 0, 1).applyQuaternion(shooter.quaternion);
+            const startPos = shooter.position.clone().add(new THREE.Vector3(0, 1.2, 0)).add(dir.clone().multiplyScalar(2.5));
+            const vel = dir.clone().multiplyScalar(isHeavy ? 1.4 : 1.8);
 
             const bullet = new THREE.Mesh(
                 new THREE.SphereGeometry(isHeavy ? 0.38 : 0.2, 8, 8),
                 new THREE.MeshBasicMaterial({ color: isPlayer ? 0xffff00 : 0xff3300 })
             );
 
-            const dir = customDir || new THREE.Vector3(0, 0, 1).applyQuaternion(shooter.quaternion);
-            bullet.position.copy(shooter.position).add(new THREE.Vector3(0, 1.2, 0)).add(dir.clone().multiplyScalar(2.5));
-
+            bullet.position.copy(startPos);
             bullet.userData = {
-                velocity: dir.multiplyScalar(isHeavy ? 1.4 : 1.8),
-                life: 80, isPlayerBullet: isPlayer,
+                velocity: vel,
+                life: 80,
+                isPlayerBullet: isPlayer,
                 damage: isPlayer ? attackDamage : (isHeavy ? 30 : 10),
-                hitRadius: isHeavy ? 1.5 : 1.0
+                hitRadius: isHeavy ? 2.8 : 2.0
             };
 
-            scene.add(bullet); bullets.push(bullet);
+            scene.add(bullet);
+            bullets.push(bullet);
+
+            // オンライン対戦時は弾の発生位置・速度を相手に送信
+            if (isPlayer && playMode === 'ONLINE') {
+                sendNetworkData({
+                    type: 'SHOOT',
+                    x: startPos.x, y: startPos.y, z: startPos.z,
+                    vx: vel.x, vy: vel.y, vz: vel.z,
+                    isHeavy: isHeavy
+                });
+            }
+        }
+
+        // オンライン相手が撃った弾を生成
+        function spawnNetworkBullet(x, y, z, vx, vy, vz, isHeavy) {
+            playShootSound(isHeavy);
+            const bullet = new THREE.Mesh(
+                new THREE.SphereGeometry(isHeavy ? 0.38 : 0.2, 8, 8),
+                new THREE.MeshBasicMaterial({ color: 0xff3300 })
+            );
+            bullet.position.set(x, y, z);
+            bullet.userData = {
+                velocity: new THREE.Vector3(vx, vy, vz),
+                life: 80,
+                isPlayerBullet: false,
+                damage: isHeavy ? 30 : 10,
+                hitRadius: isHeavy ? 2.8 : 2.0
+            };
+            scene.add(bullet);
+            bullets.push(bullet);
         }
 
         function triggerSpecialSkill() {
             if (skillGauge < 100 || isSkillActive) return;
             skillGauge = 0; updateSkillUI();
-            isSkillActive = true;
+            isSkillActive = true; skillTimer = 200;
             playSkillSound();
 
             if (selectedMachine === 'TANK') {
@@ -1107,11 +1124,8 @@ html_content = """<!DOCTYPE html>
                     const angle = (Math.PI * 2 / 10) * i;
                     shoot(player, true, new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle)));
                 }
-            } else {
-                // BIKE: ニトロ高速ダッシュ
-                playerSpeed = maxSpeed * 2.5;
+                isSkillActive = false;
             }
-            isSkillActive = false;
         }
 
         function createExplosion(pos) {
@@ -1144,7 +1158,7 @@ html_content = """<!DOCTYPE html>
         }
 
         function animate() {
-            animationFrameId = requestAnimationFrame(animate);
+            requestAnimationFrame(animate);
 
             if (gameState !== 'PLAYING') return;
 
@@ -1153,14 +1167,11 @@ html_content = """<!DOCTYPE html>
                     type: 'SYNC_POS',
                     x: player.position.x,
                     z: player.position.z,
-                    rotY: player.rotation.y
+                    rotY: player.rotation.y,
+                    machine: selectedMachine,
+                    color: selectedColorHex,
+                    maxHp: maxHp
                 });
-
-                if (remoteEnemyMesh) {
-                    remoteEnemyMesh.position.x += (remoteTargetPos.x - remoteEnemyMesh.position.x) * 0.3;
-                    remoteEnemyMesh.position.z += (remoteTargetPos.z - remoteEnemyMesh.position.z) * 0.3;
-                    remoteEnemyMesh.rotation.y = remoteTargetPos.rotY;
-                }
             }
 
             let moveY = touchMoveY;
@@ -1183,9 +1194,8 @@ html_content = """<!DOCTYPE html>
             const oldPos = player.position.clone();
             player.translateZ(playerSpeed);
 
-            const playerRadius = selectedMachine === 'TANK' ? 2.0 : 1.2;
             obstacles.forEach(o => {
-                if (player.position.distanceTo(o.position) < (o.userData.radius + playerRadius)) {
+                if (player.position.distanceTo(o.position) < o.userData.radius) {
                     player.position.copy(oldPos); playerSpeed = 0;
                 }
             });
@@ -1205,6 +1215,7 @@ html_content = """<!DOCTYPE html>
             camera.position.copy(player.position).add(camOffset);
             camera.lookAt(player.position.clone().add(new THREE.Vector3(0, 1.0, 0)));
 
+            // 弾の更新および当たり判定
             for (let i = bullets.length - 1; i >= 0; i--) {
                 const b = bullets[i];
                 b.position.add(b.userData.velocity);
@@ -1215,34 +1226,38 @@ html_content = """<!DOCTYPE html>
                         const enemy = enemies[j];
                         if (b.position.distanceTo(enemy.position.clone().add(new THREE.Vector3(0, 0.8, 0))) < (b.userData.hitRadius + enemy.userData.radius)) {
                             createExplosion(b.position);
-                            
-                            if (playMode === 'ONLINE' && enemy === remoteEnemyMesh) {
-                                sendNetworkData({ type: 'TAKE_DAMAGE', amount: b.userData.damage });
-                            } else {
-                                enemy.userData.hp -= b.userData.damage;
-                            }
-
+                            enemy.userData.hp -= b.userData.damage;
                             skillGauge = Math.min(100, skillGauge + 12); updateSkillUI();
 
-                            const enemyId = enemy.userData.id;
-                            const fill = document.getElementById(`hp-fill-${enemyId}`);
+                            const fill = document.getElementById(`hp-fill-${j}`);
                             if (fill) fill.style.width = Math.max(0, (enemy.userData.hp / enemy.userData.maxHp) * 100) + '%';
 
+                            // オンライン対戦の場合は相手にHITダメージ送信
+                            if (playMode === 'ONLINE') {
+                                sendNetworkData({
+                                    type: 'HIT',
+                                    damage: b.userData.damage
+                                });
+                            }
+
                             if (enemy.userData.hp <= 0) {
-                                createExplosion(enemy.position);
-                                const card = document.getElementById(`card-${enemyId}`);
-                                if (card) card.remove();
-                                scene.remove(enemy);
-                                enemies.splice(j, 1);
-                                if (enemies.length === 0) triggerGameEnd(true);
+                                createExplosion(enemy.position); scene.remove(enemy); enemies.splice(j, 1);
+                                if (playMode === 'ONLINE') {
+                                    triggerGameEnd(true); // オンラインで敵撃破＝勝利
+                                } else if (enemies.length === 0) {
+                                    triggerGameEnd(true);
+                                }
                             }
                             scene.remove(b); bullets.splice(i, 1); break;
                         }
                     }
                 } else {
-                    if (b.position.distanceTo(player.position.clone().add(new THREE.Vector3(0, 0.8, 0))) < 2.0) {
-                        createExplosion(b.position); damagePlayer(b.userData.damage);
-                        scene.remove(b); bullets.splice(i, 1); continue;
+                    // オフラインAIからの攻撃のみローカルで判定
+                    if (playMode === 'OFFLINE') {
+                        if (b.position.distanceTo(player.position.clone().add(new THREE.Vector3(0, 0.8, 0))) < 2.2) {
+                            createExplosion(b.position); damagePlayer(b.userData.damage);
+                            scene.remove(b); bullets.splice(i, 1); continue;
+                        }
                     }
                 }
 
@@ -1278,10 +1293,14 @@ html_content = """<!DOCTYPE html>
         }
 
         function damagePlayer(amount) {
-            if (gameState !== 'PLAYING') return;
             playerHp = Math.max(0, playerHp - amount);
             updatePlayerHPUI();
-            if (playerHp <= 0) triggerGameEnd(false);
+            if (playerHp <= 0 && gameState === 'PLAYING') {
+                if (playMode === 'ONLINE') {
+                    sendNetworkData({ type: 'GAME_OVER' }); // 自分が倒れたことを相手に通知
+                }
+                triggerGameEnd(false);
+            }
         }
 
         function updatePlayerHPUI() {
@@ -1296,7 +1315,7 @@ html_content = """<!DOCTYPE html>
 
         function triggerGameEnd(isWin) {
             gameState = isWin ? 'VICTORY' : 'DEFEAT';
-            if (bgmInterval) clearInterval(bgmInterval);
+            clearInterval(bgmInterval);
 
             setTimeout(() => {
                 const screen = document.getElementById('result-screen');
@@ -1307,38 +1326,13 @@ html_content = """<!DOCTYPE html>
             }, 800);
         }
 
-        function resetAndRestart() {
-            // クリーンアップ処理
-            document.getElementById('result-screen').style.display = 'none';
-            document.getElementById('hud').style.display = 'none';
-            document.getElementById('select-screen').style.display = 'flex';
-
-            if (player) { scene.remove(player); player = null; }
-            enemies.forEach(e => scene.remove(e));
-            enemies.length = 0;
-            bullets.forEach(b => scene.remove(b));
-            bullets.length = 0;
-            particles.forEach(p => scene.remove(p));
-            particles.length = 0;
-            document.getElementById('enemy-hp-container').innerHTML = '';
-
-            gameState = 'SELECT';
-        }
-
         function onWindowResize() {
-            if (camera && renderer) {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            }
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
         initEngine();
     </script>
 </body>
-</html>"""
-
-with open("opposition_war_fixed.html", "w", encoding="utf-8") as f:
-    f.write(html_content)
-
-print("File generated successfully: opposition_war_fixed.html")
+</html>
