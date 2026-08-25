@@ -602,7 +602,7 @@
         let playMode = 'OFFLINE';
         let peer = null, conn = null;
         let isHost = false, roomCode = '';
-        let remotePlayerData = { x: 0, z: 0, rotY: 0, hp: 100, isShooting: false, machineType: 'BIKE' };
+        let remotePlayerData = { x: 0, z: 0, rotY: 0, hp: 100, isShooting: false, machineType: 'TANK' };
 
         function selectPlayMode(mode) {
             playMode = mode;
@@ -613,7 +613,6 @@
         }
 
         function initPeerJS() {
-            // 4桁の数字部屋IDを作成 (1000 〜 9999)
             const shortId = Math.floor(1000 + Math.random() * 9000).toString();
             peer = new Peer(shortId);
 
@@ -659,8 +658,31 @@
             });
 
             conn.on('data', data => {
-                if (data.type === 'SYNC_POS') {
-                    remotePlayerData = data;
+                if (data.type === 'INIT_PLAYER') {
+                    // 相手が選択したマシン情報・カラーで相手側のメッシュを構築
+                    setupRemoteEnemy(data.machine, data.color, data.maxHp);
+                    if (gameState === 'PLAYING') {
+                        sendNetworkData({
+                            type: 'INIT_PLAYER',
+                            machine: selectedMachine,
+                            color: selectedColorHex,
+                            maxHp: maxHp
+                        });
+                    }
+                } else if (data.type === 'SYNC_POS') {
+                    if (!remoteEnemyMesh && data.machine) {
+                        setupRemoteEnemy(data.machine, data.color, data.maxHp);
+                    }
+                    if (remoteEnemyMesh) {
+                        remoteEnemyMesh.position.x += (data.x - remoteEnemyMesh.position.x) * 0.3;
+                        remoteEnemyMesh.position.z += (data.z - remoteEnemyMesh.position.z) * 0.3;
+                        remoteEnemyMesh.rotation.y = data.rotY;
+                        if (data.hp !== undefined) {
+                            remoteEnemyMesh.userData.hp = data.hp;
+                            const fill = document.getElementById('hp-fill-0');
+                            if (fill) fill.style.width = Math.max(0, (data.hp / remoteEnemyMesh.userData.maxHp) * 100) + '%';
+                        }
+                    }
                 } else if (data.type === 'SHOOT') {
                     if (remoteEnemyMesh) shoot(remoteEnemyMesh, false);
                 }
@@ -770,7 +792,7 @@
 
         function createRealBike(bodyColor = 0x0088ff, isEnemy = false) {
             const bike = new THREE.Group();
-            const color = isEnemy ? 0xdd2222 : bodyColor;
+            const color = bodyColor;
             const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.15, metalness: 0.8 });
             const chromeMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.95, roughness: 0.05 });
             const tireMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.85 });
@@ -801,37 +823,31 @@
             return bike;
         }
 
-        // --- リアルな戦車の作成 ---
         function createDetailedTank(bodyColor = 0x2e4020, isEnemy = false) {
             const tank = new THREE.Group();
-            const color = isEnemy ? 0x662222 : bodyColor;
+            const color = bodyColor;
             const armorMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4, metalness: 0.5 });
             const darkMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1c, roughness: 0.7, metalness: 0.3 });
             const metalMat = new THREE.MeshStandardMaterial({ color: 0x333338, roughness: 0.3, metalness: 0.8 });
 
-            // 下部車体
             const lowerHull = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.7, 4.6), armorMat);
             lowerHull.position.y = 0.65;
             tank.add(lowerHull);
 
-            // 上部車体 (傾斜装甲)
             const upperHull = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.5, 3.8), armorMat);
             upperHull.position.set(0, 1.15, -0.2);
             upperHull.rotation.x = -0.05;
             tank.add(upperHull);
 
-            // 履帯・ロードホイール（転輪）
             [-1.65, 1.65].forEach(x => {
                 const tread = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.85, 4.8), darkMat);
                 tread.position.set(x, 0.55, 0);
                 tank.add(tread);
 
-                // サイドスカート
                 const skirt = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.6, 4.4), armorMat);
                 skirt.position.set(x > 0 ? x + 0.35 : x - 0.35, 0.7, 0);
                 tank.add(skirt);
 
-                // ホイール配列
                 for (let z = -1.8; z <= 1.8; z += 0.9) {
                     const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.2, 12), metalMat);
                     wheel.rotation.z = Math.PI / 2;
@@ -840,32 +856,26 @@
                 }
             });
 
-            // 砲塔グループ
             const turret = new THREE.Group();
             turret.position.set(0, 1.5, -0.2);
 
-            // メイン砲塔
             const tMesh = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.75, 2.4), armorMat);
             tMesh.position.y = 0.35;
             turret.add(tMesh);
 
-            // キューポラ (ハッチ)
             const hatch = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.15, 12), darkMat);
             hatch.position.set(0.5, 0.8, -0.3);
             turret.add(hatch);
 
-            // 主砲防盾 (防盾カバー)
             const mantlet = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.5), metalMat);
             mantlet.position.set(0, 0.35, 1.3);
             turret.add(mantlet);
 
-            // 主砲砲身
             const cannon = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 3.8, 12), darkMat);
             cannon.rotation.x = Math.PI / 2;
             cannon.position.set(0, 0.35, 3.1);
             turret.add(cannon);
 
-            // マズルブレーキ (砲口先端部)
             const muzzle = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.5, 12), metalMat);
             muzzle.rotation.x = Math.PI / 2;
             muzzle.position.set(0, 0.35, 5.1);
@@ -876,7 +886,6 @@
             return tank;
         }
 
-        // --- リアルな岩障害物の作成 ---
         function createRockGeometry(radius) {
             const geo = new THREE.DodecahedronGeometry(radius, 1);
             const pos = geo.attributes.position;
@@ -957,6 +966,32 @@
             window.addEventListener('resize', onWindowResize);
         }
 
+        // --- オンライン対戦相手の動的構築 ---
+        function setupRemoteEnemy(machineType, colorHex, enemyMaxHp) {
+            if (remoteEnemyMesh) {
+                scene.remove(remoteEnemyMesh);
+                const idx = enemies.indexOf(remoteEnemyMesh);
+                if (idx !== -1) enemies.splice(idx, 1);
+            }
+
+            const color = colorHex || 0xff2222;
+            const hp = enemyMaxHp || (machineType === 'TANK' ? 100 : 60);
+
+            if (machineType === 'TANK') {
+                remoteEnemyMesh = createDetailedTank(color, true);
+                remoteEnemyMesh.userData = { type: 'TANK', name: 'RIVAL ONLINE', hp: hp, maxHp: hp, radius: 3.5 };
+            } else {
+                remoteEnemyMesh = createRealBike(color, true);
+                remoteEnemyMesh.userData = { type: 'BIKE', name: 'RIVAL ONLINE', hp: hp, maxHp: hp, radius: 2.2 };
+            }
+
+            scene.add(remoteEnemyMesh);
+            enemies.push(remoteEnemyMesh);
+
+            const container = document.getElementById('enemy-hp-container');
+            container.innerHTML = `<div class="enemy-hp-card"><div>RIVAL ONLINE</div><div class="enemy-hp-bar-bg"><div class="enemy-hp-bar-fill" id="hp-fill-0"></div></div></div>`;
+        }
+
         function startGame() {
             initAudio();
             document.getElementById('select-screen').style.display = 'none';
@@ -986,14 +1021,13 @@
                 spawnEnemy('BIKE', 'AI_RIDER_A');
                 spawnEnemy('TANK', 'AI_TANK_B');
             } else {
-                const remoteType = selectedMachine === 'TANK' ? 'BIKE' : 'TANK';
-                remoteEnemyMesh = remoteType === 'BIKE' ? createRealBike(0xff2222, true) : createDetailedTank(0x662222, true);
-                remoteEnemyMesh.userData = { type: remoteType, hp: 100, maxHp: 100, radius: 2.5 };
-                scene.add(remoteEnemyMesh);
-                enemies.push(remoteEnemyMesh);
-
-                const container = document.getElementById('enemy-hp-container');
-                container.innerHTML = `<div class="enemy-hp-card"><div>RIVAL ONLINE</div><div class="enemy-hp-bar-bg"><div class="enemy-hp-bar-fill" id="hp-fill-0"></div></div></div>`;
+                // オンライン対戦時は通信相手に自分の選択（マシン・カラー・HP）を通知
+                sendNetworkData({
+                    type: 'INIT_PLAYER',
+                    machine: selectedMachine,
+                    color: selectedColorHex,
+                    maxHp: maxHp
+                });
             }
 
             startBGM();
@@ -1112,7 +1146,10 @@
                     x: player.position.x,
                     z: player.position.z,
                     rotY: player.rotation.y,
-                    hp: playerHp
+                    hp: playerHp,
+                    machine: selectedMachine,
+                    color: selectedColorHex,
+                    maxHp: maxHp
                 });
 
                 if (remoteEnemyMesh) {
