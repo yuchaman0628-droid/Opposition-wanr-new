@@ -187,7 +187,7 @@ html_content = '''<!DOCTYPE html>
             background: #000;
             color: #fff;
             font-size: 14px;
-            width: 130px;
+            width: 140px;
             text-align: center;
             letter-spacing: 2px;
         }
@@ -409,7 +409,7 @@ html_content = '''<!DOCTYPE html>
             
             <div class="online-input-group">
                 <button onclick="hostOnlineRoom()">部屋を作成</button>
-                <input type="text" id="join-room-id" placeholder="部屋IDを入力" maxlength="6">
+                <input type="text" id="join-room-id" placeholder="6桁の部屋IDを入力" maxlength="6">
                 <button onclick="joinOnlineRoom()" style="background:#0088cc;">参加</button>
             </div>
             <div id="online-status">モードを選択してください</div>
@@ -613,12 +613,13 @@ html_content = '''<!DOCTYPE html>
         }
 
         function initPeerJS() {
-            const shortId = 'OPW' + Math.floor(1000 + Math.random() * 9000);
+            // 6桁の数字部屋IDを作成 (100000 〜 999999)
+            const shortId = Math.floor(100000 + Math.random() * 900000).toString();
             peer = new Peer(shortId);
 
             peer.on('open', id => {
                 document.getElementById('my-peer-id').innerText = id;
-                document.getElementById('online-status').innerText = 'ルーム作成またはID入力で参加してください';
+                document.getElementById('online-status').innerText = 'ルーム作成または6桁のID入力で参加してください';
             });
 
             peer.on('connection', c => {
@@ -636,13 +637,13 @@ html_content = '''<!DOCTYPE html>
         function hostOnlineRoom() {
             if (!peer) return;
             const id = document.getElementById('my-peer-id').innerText;
-            document.getElementById('online-status').innerText = `部屋を作成しました！対戦相手にID [ ${id} ] を共有してください`;
+            document.getElementById('online-status').innerText = `部屋を作成しました！対戦相手に6桁のID [ ${id} ] を共有してください`;
         }
 
         function joinOnlineRoom() {
             const targetId = document.getElementById('join-room-id').value.trim();
-            if (!targetId || !peer) {
-                alert('部屋IDを入力してください');
+            if (!targetId || targetId.length !== 6 || !peer) {
+                alert('6桁の部屋IDを入力してください');
                 return;
             }
             document.getElementById('online-status').innerText = `ID: ${targetId} へ接続中...`;
