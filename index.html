@@ -480,7 +480,7 @@
             <canvas id="minimap" width="90" height="90"></canvas>
         </div>
 
-        <div id="net-ping">ONLINE PING: 24ms</div>
+        <div id="net-ping">ONLINE PING: OK</div>
 
         <div id="mobile-controls">
             <div id="joystick-zone">
@@ -589,8 +589,8 @@
         // --- ONLINE MULTIPLAYER PEERJS ENGINE ---
         let playMode = 'OFFLINE';
         let peer = null, conn = null;
-        let isHost = false, roomCode = '';
-        let remotePlayerData = { x: 0, z: 0, rotY: 0, hp: 100, isShooting: false, machineType: 'TANK' };
+        let isHost = false;
+        let lastNetSendTime = 0;
 
         function selectPlayMode(mode) {
             playMode = mode;
@@ -661,21 +661,19 @@
                         setupRemoteEnemy(data.machine, data.color, data.maxHp);
                     }
                     if (remoteEnemyMesh) {
-                        remoteEnemyMesh.position.x += (data.x - remoteEnemyMesh.position.x) * 0.3;
-                        remoteEnemyMesh.position.z += (data.z - remoteEnemyMesh.position.z) * 0.3;
-                        remoteEnemyMesh.rotation.y = data.rotY;
+                        // カタカタ防止：急激な位置変更ではなくターゲット目標値へ代入しLerp補間
+                        remoteEnemyMesh.userData.targetX = data.x;
+                        remoteEnemyMesh.userData.targetZ = data.z;
+                        remoteEnemyMesh.userData.targetRotY = data.rotY;
                     }
                 } else if (data.type === 'SHOOT') {
-                    // 相手が撃った弾を同期生成
                     if (remoteEnemyMesh) {
                         spawnNetworkBullet(data.x, data.y, data.z, data.vx, data.vy, data.vz, data.isHeavy);
                     }
                 } else if (data.type === 'HIT') {
-                    // 相手の画面で攻撃が当たった通知を受信してダメージを受ける
                     damagePlayer(data.damage);
                     if (player) createExplosion(player.position);
                 } else if (data.type === 'GAME_OVER') {
-                    // 相手のHPが0になった通知を受けたので勝利
                     triggerGameEnd(true);
                 }
             });
@@ -976,6 +974,11 @@
                 remoteEnemyMesh.userData = { type: 'BIKE', name: 'RIVAL ONLINE', hp: hp, maxHp: hp, radius: 2.2 };
             }
 
+            // 補完目標値の初期化
+            remoteEnemyMesh.userData.targetX = remoteEnemyMesh.position.x;
+            remoteEnemyMesh.userData.targetZ = remoteEnemyMesh.position.z;
+            remoteEnemyMesh.userData.targetRotY = remoteEnemyMesh.rotation.y;
+
             scene.add(remoteEnemyMesh);
             enemies.push(remoteEnemyMesh);
 
@@ -1083,7 +1086,6 @@
             scene.add(bullet);
             bullets.push(bullet);
 
-            // オンライン対戦時は弾の発生位置・速度を相手に送信
             if (isPlayer && playMode === 'ONLINE') {
                 sendNetworkData({
                     type: 'SHOOT',
@@ -1094,7 +1096,6 @@
             }
         }
 
-        // オンライン相手が撃った弾を生成
         function spawnNetworkBullet(x, y, z, vx, vy, vz, isHeavy) {
             playShootSound(isHeavy);
             const bullet = new THREE.Mesh(
@@ -1162,7 +1163,10 @@
 
             if (gameState !== 'PLAYING') return;
 
-            if (playMode === 'ONLINE') {
+            // 送信スロットリング（30ms間隔に制御して通信の渋滞を防止）
+            const nowTime = Date.now();
+            if (playMode === 'ONLINE' && nowTime - lastNetSendTime > 30) {
+                lastNetSendTime = nowTime;
                 sendNetworkData({
                     type: 'SYNC_POS',
                     x: player.position.x,
@@ -1172,6 +1176,17 @@
                     color: selectedColorHex,
                     maxHp: maxHp
                 });
+            }
+
+            // オンライン相手の滑らかな補間移動（Lerp & 最短回転計算）
+            if (playMode === 'ONLINE' && remoteEnemyMesh && remoteEnemyMesh.userData.targetX !== undefined) {
+                remoteEnemyMesh.position.x += (remoteEnemyMesh.userData.targetX - remoteEnemyMesh.position.x) * 0.25;
+                remoteEnemyMesh.position.z += (remoteEnemyMesh.userData.targetZ - remoteEnemyMesh.position.z) * 0.25;
+
+                let diffY = remoteEnemyMesh.userData.targetRotY - remoteEnemyMesh.rotation.y;
+                while (diffY < -Math.PI) diffY += Math.PI * 2;
+                while (diffY > Math.PI) diffY -= Math.PI * 2;
+                remoteEnemyMesh.rotation.y += diffY * 0.25;
             }
 
             let moveY = touchMoveY;
@@ -1232,7 +1247,6 @@
                             const fill = document.getElementById(`hp-fill-${j}`);
                             if (fill) fill.style.width = Math.max(0, (enemy.userData.hp / enemy.userData.maxHp) * 100) + '%';
 
-                            // オンライン対戦の場合は相手にHITダメージ送信
                             if (playMode === 'ONLINE') {
                                 sendNetworkData({
                                     type: 'HIT',
@@ -1243,7 +1257,7 @@
                             if (enemy.userData.hp <= 0) {
                                 createExplosion(enemy.position); scene.remove(enemy); enemies.splice(j, 1);
                                 if (playMode === 'ONLINE') {
-                                    triggerGameEnd(true); // オンラインで敵撃破＝勝利
+                                    triggerGameEnd(true);
                                 } else if (enemies.length === 0) {
                                     triggerGameEnd(true);
                                 }
@@ -1252,7 +1266,6 @@
                         }
                     }
                 } else {
-                    // オフラインAIからの攻撃のみローカルで判定
                     if (playMode === 'OFFLINE') {
                         if (b.position.distanceTo(player.position.clone().add(new THREE.Vector3(0, 0.8, 0))) < 2.2) {
                             createExplosion(b.position); damagePlayer(b.userData.damage);
@@ -1297,7 +1310,7 @@
             updatePlayerHPUI();
             if (playerHp <= 0 && gameState === 'PLAYING') {
                 if (playMode === 'ONLINE') {
-                    sendNetworkData({ type: 'GAME_OVER' }); // 自分が倒れたことを相手に通知
+                    sendNetworkData({ type: 'GAME_OVER' });
                 }
                 triggerGameEnd(false);
             }
