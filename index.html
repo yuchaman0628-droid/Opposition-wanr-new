@@ -592,9 +592,11 @@
         let isHost = false, roomCode = '';
         let remotePlayerData = { x: 0, z: 0, rotY: 0, hp: 100, isShooting: false, machineType: 'TANK' };
 
-        // ネットワーク同期を滑らかにするための補間変数
-        let remoteTargetPos = { x: 0, z: 0 };
-        let remoteTargetRotY = 0;
+        // オンライン同期：受信時刻ベースのスナップショット補間バッファ
+        // 描画を約100ms遅らせることで、通信間隔の揺れを吸収する
+        const remoteSnapshots = [];
+        const REMOTE_INTERPOLATION_DELAY = 100;
+        const REMOTE_MAX_EXTRAPOLATION = 120;
         let lastNetSyncTime = 0;
 
         function selectPlayMode(mode) {
@@ -665,11 +667,18 @@
                     if (!remoteEnemyMesh && data.machine) {
                         setupRemoteEnemy(data.machine, data.color, data.maxHp);
                     }
-                    if (remoteEnemyMesh) {
-                        // 受信時は目標値を保持し、実際の描画フレーム（animate）内で補間移動させる
-                        remoteTargetPos.x = data.x;
-                        remoteTargetPos.z = data.z;
-                        remoteTargetRotY = data.rotY;
+                    if (remoteEnemyMesh && Number.isFinite(data.x) &&
+                        Number.isFinite(data.z) && Number.isFinite(data.rotY)) {
+                        // 受信した瞬間のローカル時刻を記録。相手PCとの時計ずれに影響されない
+                        const receivedAt = performance.now();
+                        remoteSnapshots.push({
+                            time: receivedAt,
+                            x: data.x,
+                            z: data.z,
+                            rotY: data.rotY
+                        });
+                        // 一時的な遅延でもメモリが増え続けないよう上限を設定
+                        if (remoteSnapshots.length > 30) remoteSnapshots.shift();
                     }
                 } else if (data.type === 'SHOOT') {
                     // 相手が撃った弾を同期生成
@@ -982,9 +991,14 @@
                 remoteEnemyMesh.userData = { type: 'BIKE', name: 'RIVAL ONLINE', hp: hp, maxHp: hp, radius: 2.2 };
             }
 
-            remoteTargetPos.x = remoteEnemyMesh.position.x;
-            remoteTargetPos.z = remoteEnemyMesh.position.z;
-            remoteTargetRotY = remoteEnemyMesh.rotation.y;
+            // 新しい相手モデルを作った直後は、最初の同期位置から補間を開始
+            remoteSnapshots.length = 0;
+            remoteSnapshots.push({
+                time: performance.now(),
+                x: remoteEnemyMesh.position.x,
+                z: remoteEnemyMesh.position.z,
+                rotY: remoteEnemyMesh.rotation.y
+            });
 
             scene.add(remoteEnemyMesh);
             enemies.push(remoteEnemyMesh);
@@ -1172,9 +1186,9 @@
 
             if (gameState !== 'PLAYING') return;
 
-            // 送信頻度を一定間隔（約30ms = 33fps程度）に抑え、WebRTC回線の詰まりによるカタカタ化を防ぐ
-            const nowNet = Date.now();
-            if (playMode === 'ONLINE' && nowNet - lastNetSyncTime > 30) {
+            // 20Hzで最新状態を送信。受信側はスナップショットバッファで描画する
+            const nowNet = performance.now();
+            if (playMode === 'ONLINE' && nowNet - lastNetSyncTime >= 50) {
                 lastNetSyncTime = nowNet;
                 sendNetworkData({
                     type: 'SYNC_POS',
@@ -1187,16 +1201,47 @@
                 });
             }
 
-            // 受信した相手プレイヤー位置の滑らかな線形補間（LERP）処理
-            if (remoteEnemyMesh) {
-                remoteEnemyMesh.position.x += (remoteTargetPos.x - remoteEnemyMesh.position.x) * 0.25;
-                remoteEnemyMesh.position.z += (remoteTargetPos.z - remoteEnemyMesh.position.z) * 0.25;
+            // 受信側は約100ms過去を描画。パケット到着の揺れを吸収し、位置と角度を時刻で補間する
+            if (remoteEnemyMesh && remoteSnapshots.length > 0) {
+                const renderTime = performance.now() - REMOTE_INTERPOLATION_DELAY;
 
-                // 角度の最短回転補間
-                let diffRot = remoteTargetRotY - remoteEnemyMesh.rotation.y;
-                while (diffRot < -Math.PI) diffRot += Math.PI * 2;
-                while (diffRot > Math.PI) diffRot -= Math.PI * 2;
-                remoteEnemyMesh.rotation.y += diffRot * 0.25;
+                // 描画時刻より古いスナップショットを捨て、必要な前後2点を残す
+                while (remoteSnapshots.length >= 2 &&
+                       remoteSnapshots[1].time <= renderTime) {
+                    remoteSnapshots.shift();
+                }
+
+                const first = remoteSnapshots[0];
+                const second = remoteSnapshots[1];
+
+                const shortestAngle = (from, to) => {
+                    let d = (to - from) % (Math.PI * 2);
+                    if (d > Math.PI) d -= Math.PI * 2;
+                    if (d < -Math.PI) d += Math.PI * 2;
+                    return d;
+                };
+
+                if (second && renderTime >= first.time && renderTime <= second.time) {
+                    const span = Math.max(1, second.time - first.time);
+                    const alpha = (renderTime - first.time) / span;
+                    remoteEnemyMesh.position.x = first.x + (second.x - first.x) * alpha;
+                    remoteEnemyMesh.position.z = first.z + (second.z - first.z) * alpha;
+                    remoteEnemyMesh.rotation.y = first.rotY +
+                        shortestAngle(first.rotY, second.rotY) * alpha;
+                } else if (second && renderTime > second.time) {
+                    // 新しいパケットが少し遅れても、最大120msだけ速度を予測して滑らかにつなぐ
+                    const span = Math.max(1, second.time - first.time);
+                    const ahead = Math.min(renderTime - second.time, REMOTE_MAX_EXTRAPOLATION);
+                    const factor = ahead / span;
+                    remoteEnemyMesh.position.x = second.x + (second.x - first.x) * factor;
+                    remoteEnemyMesh.position.z = second.z + (second.z - first.z) * factor;
+                    remoteEnemyMesh.rotation.y = second.rotY +
+                        shortestAngle(first.rotY, second.rotY) * factor;
+                } else {
+                    remoteEnemyMesh.position.x = first.x;
+                    remoteEnemyMesh.position.z = first.z;
+                    remoteEnemyMesh.rotation.y = first.rotY;
+                }
             }
 
             let moveY = touchMoveY;
